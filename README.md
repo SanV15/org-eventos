@@ -1,17 +1,18 @@
 # OrgEventos
 
-Plataforma organizadora de eventos. Este repositorio contiene el **frontend web**, desarrollado con Angular 17.
+Plataforma organizadora de eventos. Este repositorio contiene el frontend Angular y la API ASP.NET Core.
 
 ## Módulos incluidos
 
-El frontend contiene pantallas para autenticación, dashboard, clientes, cotizaciones, eventos, pagos y finanzas, proveedores, servicios, usuarios y portal de clientes. La presencia de una pantalla no implica que su flujo esté integrado o validado con el backend.
+El frontend contiene pantallas para autenticación, dashboard, clientes, cotizaciones, eventos, pagos y finanzas, proveedores, servicios, usuarios y portal de clientes. La API está en `backend/` e incluye controladores, servicios, SignalR y acceso a datos con Entity Framework Core.
 
 ## Requisitos
 
 - Node.js y npm compatibles con Angular CLI 17.
-- El backend/API correspondiente para probar las funciones que consultan o modifican datos.
+- .NET 8 SDK.
+- SQL Server con una base de datos y un esquema compatibles con `GestionEventosContext`.
 
-## Instalación y ejecución
+## Frontend
 
 ```bash
 npm ci
@@ -20,7 +21,26 @@ npm start
 
 La aplicación de desarrollo queda disponible en `http://localhost:4200/`.
 
-## Pruebas y compilación
+## Backend
+
+La configuración real no se incluye porque contiene credenciales. Crea una copia local del ejemplo y reemplaza los valores antes de iniciar la API:
+
+```powershell
+Copy-Item .\backend\OrgEventos.API\appsettings.example.json .\backend\OrgEventos.API\appsettings.Development.json
+$env:ASPNETCORE_URLS = "https://localhost:7106"
+dotnet run --project .\backend\OrgEventos.API\OrgEventos.API.csproj
+```
+
+La API espera SQL Server, credenciales de AWS/Stripe/SMTP y, para la integración con Google Calendar, un archivo de cuenta de servicio llamado `google-calendar-credentials.json` dentro de `backend/OrgEventos.API/`. Configura estos valores localmente; no subas credenciales. Los `appsettings*.json` locales (excepto `appsettings.example.json`), `google-calendar-credentials.json`, `.vs/`, `launchSettings.json` y archivos de usuario están excluidos por `.gitignore`.
+
+Para compilar la API:
+
+```powershell
+dotnet restore .\backend\OrgEventos.API.sln
+dotnet build .\backend\OrgEventos.API.sln
+```
+
+## Pruebas y compilación del frontend
 
 ```bash
 npm test -- --watch=false
@@ -31,11 +51,13 @@ La salida de una compilación exitosa se guarda en `dist/`.
 
 ## Pendientes y limitaciones conocidas
 
-- **Backend:** no está incluido en este repositorio. La mayoría de las llamadas esperan una API en `https://localhost:7106`; también hay un servicio de tareas que usa una API de AWS. Para probar los flujos se necesita desplegar o iniciar esos servicios, configurar CORS y disponer de HTTPS local válido.
-- **Configuración por entorno:** solo existe `src/environments/environment.ts`. Algunas direcciones de API están escritas directamente en servicios y componentes; conviene centralizarlas y definir valores separados para desarrollo y producción.
-- **Pagos:** el frontend usa Stripe con una clave publicable de pruebas. Para procesar pagos hace falta el backend que cree y gestione los intents de Stripe. La clave secreta de Stripe debe permanecer únicamente en el backend, nunca en el frontend.
-- **Pruebas automatizadas:** `npm test -- --watch=false` actualmente no compila por tres imports de servicios con nombres que no coinciden con sus clases exportadas (`ContratoPdfService`, `SignalRService` y `TicketPdfService`). Además, muchas pruebas existentes solo verifican que el servicio o componente se cree; faltan pruebas de comportamiento e integración.
-- **Compilación de producción:** `npm run build` supera el límite configurado para el paquete inicial: genera aproximadamente 1.30 MB frente al máximo de 1 MB. Hay que optimizar o dividir el bundle antes de una compilación de producción satisfactoria; aumentar el límite debería hacerse solo si está justificado.
+- **Secretos locales:** el archivo `appsettings.example.json` contiene marcadores, no credenciales funcionales. Falta crear la configuración privada local, proporcionar una base de datos y configurar las integraciones externas.
+- **Base de datos:** no se incluyen migraciones ni una copia de la base de datos; prepara el esquema antes de ejecutar la API.
+- **Configuración de despliegue:** el frontend aún contiene direcciones de API de desarrollo y la política CORS de la API solo contempla localhost. Hay que configurar los orígenes y endpoints del entorno publicado.
+- **Google Calendar:** falta proporcionar localmente el archivo de credenciales de cuenta de servicio y configurar un calendario válido.
+- **Pruebas del frontend:** `npm test -- --watch=false` actualmente no compila por tres imports de servicios con nombres que no coinciden con sus clases exportadas (`ContratoPdfService`, `SignalRService` y `TicketPdfService`). Muchas pruebas solo verifican que el servicio o componente se cree; faltan pruebas de comportamiento e integración.
+- **Compilación de producción del frontend:** `npm run build` supera el límite configurado para el paquete inicial: genera aproximadamente 1.30 MB frente al máximo de 1 MB. Hay que optimizar o dividir el bundle antes de una compilación de producción satisfactoria.
+- **Compilación de la API:** `dotnet build` finaliza correctamente, pero genera advertencias que conviene resolver.
 
 ## Tecnologías principales
 

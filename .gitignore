@@ -22,8 +22,19 @@ yarn-error.log
 
 # Visual Studio
 .vs/
+**/.vs/
 *.suo
 *.user
+
+# .NET
+**/bin/
+**/obj/
+**/Properties/launchSettings.json
+**/appsettings*.json
+!**/appsettings.example.json
+**/google-calendar-credentials.json
+**/*.csproj.user
+**/*.http
 
 # Visual Studio Code
 .vscode/*
