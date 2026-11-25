@@ -1,0 +1,487 @@
+<div class="min-h-screen bg-base-200 pb-10">
+  <!-- Navbar Minimalista exclusiva del cliente -->
+  <div class="navbar bg-primary text-primary-content shadow-lg mb-6">
+    <div class="flex-1">
+      <a class="btn btn-ghost normal-case text-xl font-bold"
+        >OrgEventos Portal</a
+      >
+    </div>
+    <div class="flex-none gap-2">
+      <span class="text-sm opacity-90 hidden sm:block"
+        >Hola, {{ nombreUsuario }}</span
+      >
+      <button
+        class="btn btn-square btn-ghost"
+        title="Cerrar Sesión"
+        (click)="cerrarSesion()"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
+          />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="px-4 max-w-md mx-auto w-full">
+    <div *ngIf="cargando" class="flex justify-center py-12">
+      <span class="loading loading-spinner text-primary loading-lg"></span>
+    </div>
+
+    <!-- SIN CONTRATO -->
+    <div
+      *ngIf="!cargando && sinContrato"
+      class="alert alert-warning shadow-lg my-6"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="stroke-current shrink-0 h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+      </svg>
+      <div>
+        <h3 class="font-bold">Bienvenido a OrgEventos</h3>
+        <div class="text-xs">
+          Aún no cuentas con un evento activo asignado. Ponte en contacto con tu
+          coordinador.
+        </div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="!cargando && !sinContrato && eventoActivo">
+      <!-- SELECTOR MULTIEVENTO -->
+      <div *ngIf="misEventos.length > 1" class="form-control w-full mb-4">
+        <label class="label py-1"
+          ><span
+            class="label-text font-bold text-xs text-base-content/70 uppercase"
+            >Seleccionar Evento</span
+          ></label
+        >
+        <select
+          class="select select-bordered select-primary w-full shadow-sm font-bold"
+          [(ngModel)]="idEventoSeleccionado"
+          (change)="seleccionarEvento(idEventoSeleccionado)"
+        >
+          <option *ngFor="let ev of misEventos" [value]="ev.idContrato">
+            {{ ev.nombreEvento }} ({{ ev.fechaEvento | date: "shortDate" }})
+          </option>
+        </select>
+      </div>
+
+      <!-- Tarjeta Principal: Estado del Evento -->
+      <div class="card bg-base-100 shadow-xl mb-6 border-t-4 border-primary">
+        <div class="card-body items-center text-center">
+          <h2 class="card-title text-2xl font-black">
+            {{ eventoActivo.nombreEvento }}
+          </h2>
+          <p class="text-base-content/70 font-medium">
+            {{ eventoActivo.fechaEvento | date: "mediumDate" }}
+          </p>
+
+          <div
+            class="badge badge-primary badge-lg mt-2 p-4 font-bold shadow-sm"
+          >
+            {{
+              eventoActivo.diasRestantes > 0
+                ? "Faltan " + eventoActivo.diasRestantes + " días"
+                : "¡Es Hoy!"
+            }}
+          </div>
+        </div>
+      </div>
+<!-- ESTADO DEL SERVICIO (STEPPER VERTICAL ACTUALIZADO) -->
+<div class="card bg-base-100 shadow-xl mb-6">
+  <div class="card-body">
+    <h3 class="font-bold text-sm mb-3 text-base-content/70 uppercase tracking-wider">Estado del Servicio</h3>
+    <ul class="steps steps-vertical text-sm text-left">
+      <!-- Paso 1: Siempre activo porque ya tiene un contrato/evento -->
+      <li class="step step-primary font-medium">Cotización Aprobada</li>
+      
+      <!-- Paso 2: Activo si ya se registró al menos un pago -->
+      <li class="step font-medium" [ngClass]="tienePagosRealizados ? 'step-primary' : ''">
+        Anticipo Registrado
+      </li>
+      
+      <!-- Paso 3: Activo si todas las cuotas están pagadas (liquidado) -->
+      <li class="step font-medium" [ngClass]="eventoLiquidado ? 'step-primary' : ''">
+        Evento Liquidado
+      </li>
+      
+      <!-- Paso 4: Activo si la fecha actual es igual o mayor a la fecha del evento -->
+      <li class="step font-medium" [ngClass]="esDiaDelEvento ? 'step-primary' : ''">
+        ¡Día del Evento!
+      </li>
+    </ul>
+  </div>
+</div>
+
+      <!-- Alerta Vencimiento de Pago -->
+      <div
+        *ngIf="alertaPago.mostrar"
+        class="alert shadow-lg mb-6 border-l-4"
+        [ngClass]="{
+          'alert-error border-red-700 text-white': alertaPago.tipo === 'error',
+          'alert-warning border-orange-500': alertaPago.tipo === 'warning',
+          'alert-info border-blue-500 text-white': alertaPago.tipo === 'info',
+        }"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="stroke-current shrink-0 h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <div class="flex-1">
+          <h3 class="font-bold text-sm">{{ alertaPago.mensaje }}</h3>
+          <div class="text-xs opacity-90">
+            Monto: {{ alertaPago.monto | currency }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCIONES DE PAGO DIRECTO -->
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body p-5">
+          <h3
+            class="font-bold text-base text-base-content/80 uppercase tracking-wider mb-2"
+          >
+            Pagar Cuota Pendiente
+          </h3>
+
+          <div
+            *ngIf="cuotaPendienteActual"
+            class="bg-base-200 p-4 rounded-xl mb-4"
+          >
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-sm"
+                >Cuota #{{ cuotaPendienteActual.numeroCuota }}</span
+              >
+              <span class="badge badge-warning text-xs font-semibold"
+                >Pendiente</span
+              >
+            </div>
+            <div class="text-2xl font-black text-primary mb-1">
+              {{ cuotaPendienteActual.saldoRestante | currency }}
+            </div>
+            <div class="text-xs text-base-content/60">
+              Vence: {{ cuotaPendienteActual.fechaLimite | date: "mediumDate" }}
+            </div>
+          </div>
+
+          <div
+            *ngIf="!cuotaPendienteActual"
+            class="text-center py-4 text-success font-bold text-sm"
+          >
+            ¡Felicidades! Este contrato se encuentra completamente liquidado.
+          </div>
+
+          <!-- BOTONES DE PAGO -->
+          <div *ngIf="cuotaPendienteActual" class="space-y-2">
+            <button
+              class="btn btn-primary w-full text-white shadow"
+              (click)="abrirModalStripe()"
+            >
+              💳 Pagar en Línea (Tarjeta)
+            </button>
+            <button
+              class="btn btn-outline btn-secondary w-full"
+              (click)="abrirModalTransferencia()"
+            >
+              🏦 Transferir por SPEI
+            </button>
+
+<!-- ENLACE PARA ACTUALIZAR TARJETA -->
+<div class="mt-4 text-center">
+  <button 
+    class="btn btn-link btn-sm text-xs text-primary no-underline hover:underline inline-flex items-center gap-1" 
+    (click)="abrirModalActualizarTarjeta()">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+    ¿Deseas actualizar o cambiar tu tarjeta guardada?
+  </button>
+</div>
+          </div>
+        </div>
+      </div>
+      <!-- BOTONES DE ACCIÓN RÁPIDA (CONTRATO E HISTORIAL) -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <button
+          class="btn btn-outline btn-neutral h-auto py-4 flex flex-col shadow-sm"
+          (click)="abrirModalContrato()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-6 h-6 mb-1"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+            />
+          </svg>
+          <span class="text-xs">Ver Contrato</span>
+        </button>
+
+        <button
+          class="btn btn-outline btn-neutral h-auto py-4 flex flex-col shadow-sm"
+          (click)="abrirModalHistorial()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-6 h-6 mb-1"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+          <span class="text-xs">Historial Pagos</span>
+        </button>
+      </div>
+
+      <!-- SECCIÓN DE AYUDA Y CONTACTO DE LA EMPRESA -->
+      <div class="card bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body p-4 text-sm">
+          <h3
+            class="font-bold text-xs uppercase tracking-wider text-primary mb-2 flex items-center gap-1.5"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            ¿Necesitas ayuda con tu evento?
+          </h3>
+          <p class="text-xs text-base-content/70 mb-2">
+            Comunícate con nuestro equipo de atención a clientes:
+          </p>
+          <div class="space-y-1 font-semibold">
+            <div class="flex items-center gap-2">
+              <span>📞 Teléfono:</span>
+              <a href="tel:9990000000" class="text-primary hover:underline"
+                >999 123 4567</a
+              >
+            </div>
+            <div class="flex items-center gap-2">
+              <span>✉️ Correo:</span>
+              <a
+                href="mailto:soporte&#64;orgeventos.com"
+                class="text-primary hover:underline"
+                >soporte&#64;orgeventos.com</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>
+<!-- MODAL STRIPE PAGO EN LÍNEA -->
+<dialog id="modal_pago_stripe_cliente" class="modal">
+  <div class="modal-box max-w-sm">
+    <h3 class="font-bold text-lg mb-2">Pagar Cuota con Tarjeta</h3>
+    <p class="text-xs text-gray-500 mb-4">Procesamiento seguro encriptado vía Stripe</p>
+
+    <div *ngIf="cargandoStripe" class="flex justify-center py-6">
+      <span class="loading loading-spinner text-primary"></span>
+    </div>
+
+    <!-- Contenedor de Stripe Elements -->
+    <div id="card-element-cliente" class="p-3 border rounded-lg bg-base-100 shadow-sm mb-4 min-h-[44px]"></div>
+
+    <!-- CHECKBOX DE CONSENTIMIENTO (AHORA SÍ DENTRO DEL MODAL) -->
+    <div class="form-control my-3 bg-base-200 p-3 rounded-lg">
+      <label class="label cursor-pointer justify-start gap-3 items-start p-0">
+        <input 
+          type="checkbox" 
+          [(ngModel)]="autorizaGuardarTarjeta" 
+          name="autorizaGuardarTarjeta" 
+          class="checkbox checkbox-primary checkbox-sm mt-0.5" />
+        <span class="label-text text-xs text-base-content/90 leading-tight font-medium">
+          Autorizo a OrgEventos a guardar mi tarjeta de forma segura para futuros cargos automáticos.
+        </span>
+      </label>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn btn-ghost btn-sm" (click)="cerrarModalStripe()">Cancelar</button>
+      <button 
+        class="btn btn-primary btn-sm text-white" 
+        (click)="procesarPagoTarjeta()" 
+        [disabled]="procesandoPago || cargandoStripe || !autorizaGuardarTarjeta">
+        <span *ngIf="procesandoPago" class="loading loading-spinner loading-xs"></span>
+        Pagar {{ cuotaPendienteActual?.saldoRestante | currency }}
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- MODAL SPEI -->
+<dialog id="modal_transferencia_agencia" class="modal">
+  <div class="modal-box max-w-sm">
+    <h3 class="font-bold text-lg mb-2">Datos para Transferencia SPEI</h3>
+    <p class="text-xs text-gray-500 mb-4">
+      Realiza tu depósito desde tu banca móvil y notifica a tu coordinador.
+    </p>
+
+    <div class="bg-base-200 p-4 rounded-xl space-y-2 text-sm border">
+      <div>
+        <span class="text-xs text-gray-500 uppercase block">Banco</span>
+        <span class="font-bold text-primary">{{ cuentaAgencia.banco }}</span>
+      </div>
+      <div>
+        <span class="text-xs text-gray-500 uppercase block"
+          >CLABE Interbancaria</span
+        >
+        <code
+          class="font-mono font-bold select-all bg-base-300 px-2 py-1 rounded block text-xs"
+          >{{ cuentaAgencia.clabe }}</code
+        >
+      </div>
+      <div>
+        <span class="text-xs text-gray-500 uppercase block">Titular</span>
+        <span class="font-semibold">{{ cuentaAgencia.titular }}</span>
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <button
+        class="btn btn-primary btn-sm text-white"
+        (click)="cerrarModalTransferencia()"
+      >
+        Entendido
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- MODAL HISTORIAL DE CUOTAS -->
+<dialog id="modal_historial_cuotas" class="modal">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-lg mb-4">
+      Plan de Pagos: {{ eventoActivo?.nombreEvento }}
+    </h3>
+
+    <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
+      <div
+        *ngFor="let c of eventoActivo?.cuotas"
+        class="p-3 rounded-lg border flex justify-between items-center"
+        [ngClass]="
+          c.estado === 'Pagada'
+            ? 'bg-success/10 border-success/30'
+            : 'bg-base-200 border-base-300'
+        "
+      >
+        <div>
+          <div class="font-bold text-sm">Cuota #{{ c.numeroCuota }}</div>
+          <div class="text-xs text-gray-500">
+            {{ c.fechaLimite | date: "mediumDate" }}
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-sm">{{ c.montoTotal | currency }}</div>
+          <span
+            class="badge badge-xs font-semibold"
+            [ngClass]="
+              c.estado === 'Pagada'
+                ? 'badge-success text-white'
+                : 'badge-warning'
+            "
+          >
+            {{ c.estado }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn btn-ghost btn-sm" (click)="cerrarModalHistorial()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- MODAL CONTRATO (En construcción) -->
+<dialog id="modal_contrato" class="modal">
+  <div class="modal-box max-w-sm text-center">
+    <h3 class="font-bold text-lg mb-2">Contrato del Servicio</h3>
+    <p class="text-xs text-gray-500 mb-4">
+      La visualización de documentos en PDF estará disponible próximamente.
+    </p>
+    <div class="modal-action justify-center">
+      <button class="btn btn-neutral btn-sm" (click)="cerrarModalContrato()">
+        Entendido
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- MODAL ACTUALIZAR O CAMBIAR TARJETA -->
+<dialog id="modal_actualizar_tarjeta" class="modal">
+  <div class="modal-box max-w-sm">
+    <h3 class="font-bold text-lg mb-2">Actualizar Tarjeta Guardada</h3>
+    <p class="text-xs text-gray-500 mb-4">Ingresa tu nueva tarjeta de crédito o débito para futuros cobros automáticos.</p>
+
+    <div *ngIf="cargandoStripe" class="flex justify-center py-6">
+      <span class="loading loading-spinner text-primary"></span>
+    </div>
+
+    <!-- Contenedor Stripe Elements para actualización -->
+    <div id="card-element-actualizar" class="p-3 border rounded-lg bg-base-100 shadow-sm mb-4 min-h-[44px]"></div>
+
+    <div class="modal-action">
+      <button class="btn btn-ghost btn-sm" (click)="cerrarModalActualizarTarjeta()">Cancelar</button>
+      <button 
+        class="btn btn-primary btn-sm text-white" 
+        (click)="guardarNuevaTarjeta()" 
+        [disabled]="procesandoPago || cargandoStripe">
+        <span *ngIf="procesandoPago" class="loading loading-spinner loading-xs"></span>
+        Guardar Tarjeta
+      </button>
+    </div>
+  </div>
+</dialog>

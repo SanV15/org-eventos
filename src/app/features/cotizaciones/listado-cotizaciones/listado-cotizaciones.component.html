@@ -1,0 +1,194 @@
+<div
+  class="min-h-screen bg-base-200 text-base-content p-6 lg:p-8"
+  [attr.data-theme]="temaService.temaActual()"
+>
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-2">
+      <app-breadcrumbs />
+    </div>
+
+    <!-- Encabezado con texto limpio de pendientes -->
+    <div class="flex flex-wrap justify-between items-start sm:items-center mb-6 gap-4">
+      <div class="flex items-start sm:items-center gap-3">
+        <a
+          routerLink="/dashboard"
+          class="btn btn-circle btn-ghost btn-sm mt-1 sm:mt-0"
+          title="Regresar al Dashboard"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 19.5 8.25 12l7.5-7.5"
+            />
+          </svg>
+        </a>
+        <div>
+          <h2 class="text-2xl lg:text-3xl font-bold text-base-content m-0">
+            Historial de Cotizaciones
+          </h2>
+          <p *ngIf="!cargando" class="text-sm text-base-content/75 mt-1">
+            Actualmente tienes
+            <span class="font-semibold text-warning">{{ pendientes.length }}</span>
+            {{ pendientes.length === 1 ? 'cotización pendiente' : 'cotizaciones pendientes' }} por revisar<span *ngIf="cotizacionesSeguimiento.length > 0">;
+            <span class="font-semibold text-error">{{ cotizacionesSeguimiento.length }}</span>
+            {{ cotizacionesSeguimiento.length === 1 ? 'lleva varios días y requiere seguimiento' : 'llevan varios días y requieren seguimiento' }}</span>.
+          </p>
+        </div>
+      </div>
+
+      <a routerLink="/cotizaciones/nueva" class="btn btn-primary rounded-xl shadow-sm">
+        + Nuevo Presupuesto
+      </a>
+    </div>
+
+    <!-- Filtros y Búsqueda -->
+    <div
+      *ngIf="!cargando"
+      class="bg-base-100 border border-base-300 rounded-2xl p-4 mb-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+    >
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="btn btn-sm rounded-full"
+          [ngClass]="filtroEstado === 'Todas' ? 'btn-primary' : 'btn-ghost'"
+          (click)="filtroEstado = 'Todas'"
+        >
+          Todas ({{ cotizaciones.length }})
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm rounded-full"
+          [ngClass]="filtroEstado === 'Pendiente' ? 'btn-warning' : 'btn-ghost'"
+          (click)="filtroEstado = 'Pendiente'"
+        >
+          Pendientes ({{ pendientes.length }})
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm rounded-full"
+          [ngClass]="filtroEstado === 'Aprobada' ? 'btn-success' : 'btn-ghost'"
+          (click)="filtroEstado = 'Aprobada'"
+        >
+          Aprobadas ({{ aprobadas.length }})
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm rounded-full"
+          [ngClass]="filtroEstado === 'Rechazada' ? 'btn-error' : 'btn-ghost'"
+          (click)="filtroEstado = 'Rechazada'"
+        >
+          Rechazadas ({{ rechazadas.length }})
+        </button>
+      </div>
+
+      <div class="w-full md:w-72">
+        <input
+          type="text"
+          [(ngModel)]="busqueda"
+          placeholder="Buscar por folio o cliente..."
+          class="input input-bordered input-sm w-full rounded-xl"
+        />
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="errorMensaje" class="alert alert-error shadow-sm mb-6">
+      <span>{{ errorMensaje }}</span>
+    </div>
+
+    <!-- Contenedor de la Tabla -->
+    <div class="card bg-base-100 shadow-xl border-t-4 border-primary rounded-2xl">
+      <div class="card-body p-0 overflow-x-auto rounded-b-2xl">
+        <div *ngIf="cargando" class="text-center py-10">
+          <span class="loading loading-spinner text-primary loading-lg"></span>
+        </div>
+
+        <table *ngIf="!cargando" class="table table-zebra w-full">
+          <thead class="bg-base-200 text-base">
+            <tr>
+              <th>Folio</th>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th>Total Calculado</th>
+              <th>Estado y Seguimiento</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="cotizacionesFiltradas.length === 0">
+              <td colspan="6" class="text-center py-10 opacity-65">
+                No hay cotizaciones registradas o que coincidan con el filtro.
+              </td>
+            </tr>
+
+            <tr
+              *ngFor="let c of cotizacionesFiltradas"
+              [ngClass]="requiereSeguimiento(c) ? 'bg-warning/10' : ''"
+            >
+              <td class="font-bold opacity-80 whitespace-nowrap">
+                #{{ c.idCotizacion | number: "3.0-0" }}
+              </td>
+              <td class="font-semibold">{{ c.nombreClienteCompleto }}</td>
+              <td class="whitespace-nowrap text-sm opacity-80">{{ c.fecha | date: "mediumDate" }}</td>
+              <td class="font-bold text-success whitespace-nowrap">
+                ${{ c.total | number: "1.2-2" }}
+              </td>
+              <td>
+                <div class="flex flex-col items-start gap-1">
+                  <div
+                    class="badge font-medium text-white"
+                    [ngClass]="{
+                      'badge-warning': normalizarEstado(c.estado) === 'pendiente',
+                      'badge-success': normalizarEstado(c.estado) === 'aprobada',
+                      'badge-error': normalizarEstado(c.estado) === 'rechazada',
+                      'badge-neutral':
+                        normalizarEstado(c.estado) !== 'pendiente' &&
+                        normalizarEstado(c.estado) !== 'aprobada' &&
+                        normalizarEstado(c.estado) !== 'rechazada'
+                    }"
+                  >
+                    {{ c.estado }}
+                  </div>
+                  <span
+                    *ngIf="mensajeSeguimiento(c) as msg"
+                    class="text-xs"
+                    [ngClass]="requiereSeguimiento(c) ? 'text-error font-semibold' : 'opacity-70'"
+                  >
+                    {{ msg }}
+                  </span>
+                </div>
+              </td>
+              <td class="text-right whitespace-nowrap">
+                <button
+                  *ngIf="normalizarEstado(c.estado) === 'pendiente'"
+                  type="button"
+                  class="btn btn-xs sm:btn-sm btn-primary rounded-lg"
+                  (click)="aprobarYCrearEvento(c)"
+                >
+                  Aprobar y crear evento
+                </button>
+
+                <button
+                  *ngIf="normalizarEstado(c.estado) === 'aprobada'"
+                  type="button"
+                  class="btn btn-xs sm:btn-sm btn-outline btn-success rounded-lg"
+                  (click)="crearEvento(c)"
+                >
+                  Crear evento
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

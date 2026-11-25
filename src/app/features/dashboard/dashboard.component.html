@@ -1,0 +1,234 @@
+<div
+  class="drawer lg:drawer-open min-h-screen bg-base-200 text-base-content"
+  [attr.data-theme]="temaService.temaActual()"
+>
+  <input id="drawer-dashboard" type="checkbox" class="drawer-toggle" />
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="drawer-content flex flex-col">
+
+    <!-- Barra de Navegación Superior -->
+    <div class="w-full navbar bg-base-100 border-b border-base-300 px-4 lg:px-8">
+      <div class="flex-none lg:hidden">
+        <label for="drawer-dashboard" aria-label="abrir menú" class="btn btn-square btn-ghost">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-6 h-6 stroke-current">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </label>
+      </div>
+      <div class="flex-1">
+        <a class="text-base font-bold text-primary lg:hidden">Plataforma de Gestión de Eventos</a>
+      </div>
+      <div class="flex-none items-center gap-3">
+        <span class="font-medium text-sm hidden sm:inline-block opacity-80">Bienvenido, {{ nombreUsuario }}</span>
+        <button class="btn btn-square btn-ghost" title="Cerrar Sesión" (click)="cerrarSesion()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenido del Panel -->
+    <div class="p-6 lg:p-8 max-w-7xl w-full mx-auto">
+      <div class="mb-2">
+        <app-breadcrumbs />
+      </div>
+
+      <div class="mb-6">
+        <h1 class="text-2xl lg:text-3xl font-bold tracking-tight">Panel de Control</h1>
+      </div>
+
+      <!-- Tres Tarjetas Centradas con Badge Debajo -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="card bg-base-100 border border-base-300 rounded-2xl shadow-sm">
+          <div class="card-body p-5 items-center text-center">
+            <span class="text-sm font-semibold opacity-75">Eventos Activos</span>
+            <div class="text-3xl font-black text-primary my-1">{{ resumen.eventosActivos }}</div>
+            <span class="badge badge-primary h-auto rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap">
+              {{ resumen.eventosEsteMes }} este mes
+            </span>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 border border-base-300 rounded-2xl shadow-sm">
+          <div class="card-body p-5 items-center text-center">
+            <span class="text-sm font-semibold opacity-75">Tareas Pendientes</span>
+            <div class="text-3xl font-black text-secondary my-1">{{ resumen.tareasPendientes }}</div>
+            <span class="badge badge-secondary h-auto rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap">
+              Por atender
+            </span>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 border border-base-300 rounded-2xl shadow-sm">
+          <div class="card-body p-5 items-center text-center">
+            <span class="text-sm font-semibold opacity-75">Cotizaciones Pendientes</span>
+            <div class="text-3xl font-black text-accent my-1">{{ resumen.cotizacionesPendientes }}</div>
+            <span class="badge badge-accent h-auto rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap">
+              Por revisar
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eventos Próximos -->
+      <div class="bg-base-100 rounded-2xl p-6 border border-base-300 shadow-sm">
+        <h2 class="text-xl font-bold mb-4">Eventos próximos</h2>
+
+        <div *ngIf="cargando" class="flex justify-center py-6">
+          <span class="loading loading-spinner text-primary"></span>
+        </div>
+
+        <div *ngIf="!cargando && resumen.proximosEventos.length === 0" class="text-sm opacity-70 py-4 text-center">
+          No hay eventos próximos registrados en este momento.
+        </div>
+
+        <div *ngIf="!cargando && resumen.proximosEventos.length > 0" class="overflow-x-auto">
+          <table class="table w-full">
+            <thead>
+              <tr>
+                <th>Evento</th>
+                <th>Fecha</th>
+                <th>Lugar / Sede</th>
+                <th>Estado</th>
+                <th class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ev of resumen.proximosEventos">
+                <td class="font-bold">{{ ev.nombreEvento }}</td>
+                <td class="whitespace-nowrap">{{ ev.fechaEvento | date: 'mediumDate' }}</td>
+                <td>{{ ev.lugar }}</td>
+                <td class="whitespace-nowrap">
+                  <span
+                    class="badge h-auto rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap"
+                    [ngClass]="temaService.claseBadgeEstadoEvento(ev.estado)"
+                  >
+                    {{ ev.estado }}
+                  </span>
+                </td>
+                <td class="text-right whitespace-nowrap">
+                  <button
+                    class="btn btn-sm btn-outline btn-primary rounded-full px-4 whitespace-nowrap"
+                    (click)="irAlPlanificador(ev)"
+                  >
+                    Ir al Evento ➔
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENÚ LATERAL -->
+  <div class="drawer-side">
+    <label for="drawer-dashboard" aria-label="cerrar menú" class="drawer-overlay"></label>
+    <ul class="menu p-4 w-72 min-h-full bg-base-100 text-base-content flex flex-col gap-1.5 shadow-xl border-r border-base-300">
+
+      <li class="mb-4 mt-2 pointer-events-none px-2">
+        <span class="text-base font-black text-primary tracking-tight leading-snug text-center block">
+          Plataforma de Gestión de Eventos
+        </span>
+      </li>
+
+      <li class="menu-title text-xs uppercase font-bold tracking-wider opacity-60">Operación y Eventos</li>
+      <li>
+        <a routerLink="/clientes" routerLinkActive="active font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+          </svg>
+          Clientes
+        </a>
+      </li>
+      <li>
+        <a routerLink="/eventos" routerLinkActive="active font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5M9 15h.008v.008H9V15zm0 2.25h.008v.008H9v-.008zM11.25 15h.008v.008H11.25V15zm0 2.25h.008v.008H11.25v-.008zm2.25-2.25h.008v.008H13.5V15zm0 2.25h.008v.008H13.5v-.008zm2.25-2.25h.008v.008H15.75V15zm0 2.25h.008v.008H15.75v-.008z" />
+          </svg>
+          Administración de Eventos
+        </a>
+      </li>
+      <!-- <li>
+        <a routerLink="/eventos/tareas-externas" routerLinkActive="active font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Tareas Externas
+        </a>
+      </li> -->
+
+      <li class="menu-title text-xs uppercase font-bold tracking-wider opacity-60 mt-3">Comercial y Finanzas</li>
+      <li>
+        <a routerLink="/cotizaciones" routerLinkActive="active font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+          Nueva Cotización
+        </a>
+      </li>
+      <li>
+        <a routerLink="/pagos" routerLinkActive="active font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Pagos y Caja
+        </a>
+      </li>
+
+      <li class="menu-title text-xs uppercase font-bold tracking-wider opacity-60 mt-3">Catálogos</li>
+      <li>
+        <a routerLink="/servicios" routerLinkActive="active font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+          </svg>
+          Servicios Internos
+        </a>
+      </li>
+      <li>
+        <a routerLink="/proveedores" routerLinkActive="active font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+          </svg>
+          Proveedores
+        </a>
+      </li>
+
+      <!-- Sección exclusiva de Administrador -->
+      <ng-container *ngIf="esAdministrador">
+        <li class="menu-title text-xs uppercase font-bold tracking-wider opacity-60 mt-3">Administración</li>
+        <li>
+          <a routerLink="/usuarios/" routerLinkActive="active font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+            </svg>
+            Agregar Usuario
+          </a>
+        </li>
+      </ng-container>
+
+      <!-- Preferencias al final del menú lateral -->
+      <li class="menu-title text-xs uppercase font-bold tracking-wider opacity-60 mt-auto pt-4">Preferencias</li>
+      <li>
+        <button
+          type="button"
+          class="flex items-center justify-between rounded-lg"
+          (click)="temaService.alternarTema()"
+        >
+          <span>Modo Oscuro</span>
+          <input
+            type="checkbox"
+            class="toggle toggle-sm toggle-primary pointer-events-none"
+            [checked]="temaService.esOscuro()"
+            readOnly
+          />
+        </button>
+      </li>
+
+    </ul>
+  </div>
+</div>

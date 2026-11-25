@@ -1,0 +1,80 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <h2 class="text-3xl font-bold mb-2">Proveedores Externos (AWS)</h2>
+  <p class="text-base-content/70 mb-8">Módulo Serverless.</p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Formulario CRUD -->
+    <div class="card bg-base-100 shadow-md p-6 h-fit border border-base-300">
+      <h3 class="text-xl font-bold mb-4">{{ modoEdicion ? 'Editar' : 'Nueva' }} Tarea Externa</h3>
+      
+      <div class="form-control mb-3">
+        <label class="label"><span class="label-text">Nombre de la Tarea</span></label>
+        <input type="text" [(ngModel)]="tareaActual.nombre" class="input input-bordered" placeholder="Ej. Traer hielo" />
+      </div>
+
+      <div class="form-control mb-3">
+        <label class="label"><span class="label-text">Descripción</span></label>
+        <textarea [(ngModel)]="tareaActual.descripcion" class="textarea textarea-bordered h-24" placeholder="Detalles..."></textarea>
+      </div>
+
+      <div class="form-control mb-6">
+        <label class="label"><span class="label-text">Estado</span></label>
+        <select [(ngModel)]="tareaActual.estado" class="select select-bordered">
+          <option value="Pendiente">Pendiente</option>
+          <option value="En progreso">En progreso</option>
+          <option value="Completada">Completada</option>
+        </select>
+      </div>
+
+      <div class="flex gap-2">
+        <button class="btn btn-primary flex-1" (click)="guardarTarea()" [disabled]="!tareaActual.nombre">
+          {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+        </button>
+        <button *ngIf="modoEdicion" class="btn btn-ghost" (click)="resetFormulario()">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Tabla de Tareas (DynamoDB) -->
+    <div class="lg:col-span-2">
+      <div *ngIf="cargando" class="flex justify-center p-12">
+        <span class="loading loading-spinner text-primary loading-lg"></span>
+      </div>
+
+      <div *ngIf="!cargando" class="overflow-x-auto bg-base-100 shadow-md rounded-lg border border-base-300">
+        <table class="table w-full">
+          <thead class="bg-base-200">
+            <tr>
+              <th>Tarea</th>
+              <th>Estado</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of tareas">
+              <td>
+                <div class="font-bold">{{ t.nombre }}</div>
+                <div class="text-sm text-base-content/60">{{ t.descripcion }}</div>
+                <div class="text-xs text-base-content/40 mt-1">ID: {{ t.idTarea | slice:0:8 }}...</div>
+              </td>
+              <td>
+                <div class="badge" 
+                     [ngClass]="{'badge-success': t.estado === 'Completada', 'badge-warning': t.estado === 'En progreso'}">
+                  {{ t.estado }}
+                </div>
+              </td>
+              <td class="text-right flex justify-end gap-2">
+                <button class="btn btn-sm btn-ghost" (click)="editarTarea(t)">Editar</button>
+                <button class="btn btn-sm btn-error btn-outline" (click)="eliminar(t.idTarea!)">Eliminar</button>
+              </td>
+            </tr>
+            <tr *ngIf="tareas.length === 0">
+              <td colspan="3" class="text-center py-8 text-base-content/50">No hay tareas externas registradas en AWS.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>

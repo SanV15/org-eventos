@@ -1,0 +1,80 @@
+<div class="p-6 max-w-4xl mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a routerLink="/clientes" class="btn btn-circle btn-ghost btn-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+    </a>
+    <h2 class="text-3xl font-bold text-base-content m-0">Editar Cliente</h2>
+  </div>
+
+  <!-- Alerta de Error -->
+  <div *ngIf="mensajeError" class="alert alert-error mb-6 shadow-sm">
+    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6 text-white" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <span class="text-white font-medium">{{ mensajeError }}</span>
+  </div>
+
+  <div *ngIf="cargando" class="text-center py-10">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+  </div>
+
+  <div *ngIf="!cargando" class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      
+      <!-- Fila 1: Nombres -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Nombre(s)</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="cliente.nombre" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Apellido Paterno</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="cliente.apellidoPaterno" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Apellido Materno</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="cliente.apellidoMaterno" />
+        </div>
+      </div>
+
+      <!-- Fila 2: Contacto -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Correo de Contacto</span></label>
+          <input type="email" class="input input-bordered w-full" [(ngModel)]="cliente.correoContacto" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Teléfono</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="cliente.telefono" />
+        </div>
+      </div>
+
+      <!-- Fila 3: Dirección -->
+      <div class="form-control w-full mb-6">
+        <label class="label"><span class="label-text font-semibold">Dirección Física</span></label>
+        <textarea class="textarea textarea-bordered h-24" [(ngModel)]="cliente.direccion"></textarea>
+      </div>
+
+      <div class="card-actions justify-end mt-4">
+        <a routerLink="/clientes" class="btn btn-ghost">Cancelar</a>
+        <!-- Este botón solo abre el modal, no guarda directo -->
+        <button class="btn btn-primary" (click)="abrirModal()">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<div class="modal" [class.modal-open]="modalAbierto">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl text-warning flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+      Confirmar Actualización
+    </h3>
+    <p class="py-4">¿Estás seguro de que deseas guardar los cambios? Si modificaste el nombre, este también se actualizará en las credenciales internas de la plataforma.</p>
+    <div class="modal-action">
+      <button class="btn btn-ghost" (click)="cerrarModal()">Revisar de nuevo</button>
+      <!-- Este botón sí ejecuta el método en C# -->
+      <button class="btn btn-primary" (click)="confirmarActualizacion()">Sí, actualizar datos</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" (click)="cerrarModal()"><button>cerrar</button></form>
+</div>

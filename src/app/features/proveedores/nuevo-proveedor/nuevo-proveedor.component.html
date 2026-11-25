@@ -1,0 +1,120 @@
+<div class="p-6 max-w-4xl mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a routerLink="/proveedores" class="btn btn-circle btn-ghost btn-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+    </a>
+    <h2 class="text-3xl font-bold text-base-content m-0">Nuevo Proveedor</h2>
+  </div>
+
+  <div *ngIf="mensajeError" class="alert alert-error mb-6 shadow-sm">
+    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6 text-white" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <span class="text-white font-medium">{{ mensajeError }}</span>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+
+      <!-- Imagen / Logotipo Opcional -->
+      <div class="flex flex-col sm:flex-row items-center gap-5 bg-base-200/60 p-4 rounded-xl mb-6">
+        <div class="w-20 h-20 rounded-full overflow-hidden bg-primary/10 text-primary flex items-center justify-center ring-2 ring-primary/25 shrink-0">
+          <img *ngIf="previewFotoUrl" [src]="previewFotoUrl" alt="Vista previa" class="w-full h-full object-cover" />
+          <svg *ngIf="!previewFotoUrl" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-9 h-9">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
+          </svg>
+        </div>
+
+        <div class="flex-1 text-center sm:text-left">
+          <h4 class="font-bold text-sm">Logotipo o Fotografía (Opcional)</h4>
+          <p class="text-xs text-gray-500 mb-2">Formatos permitidos: JPG, PNG o WEBP.</p>
+          <div class="flex flex-wrap justify-center sm:justify-start gap-2">
+            <label class="btn btn-sm btn-outline btn-primary cursor-pointer">
+              Seleccionar imagen
+              <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)" />
+            </label>
+            <button *ngIf="archivoFoto" type="button" class="btn btn-sm btn-ghost text-error" (click)="quitarFoto()">
+              Quitar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="text-lg font-bold mb-4 border-b pb-2">Datos Generales</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Empresa / Nombre *</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="proveedor.nombre" placeholder="Ej. Banquetería Doña Rosa" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Apellido Paterno</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="proveedor.apellidoPaterno" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Apellido Materno</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="proveedor.apellidoMaterno" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Correo Electrónico</span></label>
+          <input type="email" class="input input-bordered w-full" [(ngModel)]="proveedor.correo" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Teléfono</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="proveedor.telefono" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Dirección Física</span></label>
+          <textarea class="textarea textarea-bordered h-24" [(ngModel)]="proveedor.direccion"></textarea>
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Descripción de Servicios</span></label>
+          <textarea class="textarea textarea-bordered h-24" [(ngModel)]="proveedor.descripcion" placeholder="Especificaciones adicionales..."></textarea>
+        </div>
+      </div>
+
+      <!-- DATOS BANCARIOS -->
+      <h3 class="text-lg font-bold mb-4 border-b pb-2">Datos Bancarios (Para Transferencias)</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Banco</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="proveedor.banco" placeholder="Ej. BBVA México" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">CLABE Interbancaria</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="proveedor.clabeInterbancaria" maxlength="18" placeholder="18 dígitos" />
+        </div>
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Titular de la Cuenta</span></label>
+          <input type="text" class="input input-bordered w-full" [(ngModel)]="proveedor.titularCuenta" placeholder="Nombre del titular" />
+        </div>
+      </div>
+
+      <h3 class="text-lg font-bold mb-4 border-b pb-2">Categorías del Proveedor *</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div class="form-control" *ngFor="let cat of categorias">
+          <label class="cursor-pointer label justify-start gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors">
+            <input type="checkbox" class="checkbox checkbox-primary"
+                   [checked]="proveedor.categoriasIds.includes(cat.idCategoria)"
+                   (change)="toggleCategoria(cat.idCategoria)" />
+            <span class="label-text">{{ cat.nombre }}</span>
+          </label>
+        </div>
+        <div *ngIf="categorias.length === 0" class="text-gray-500 text-sm">
+          No hay categorías registradas en el sistema.
+        </div>
+      </div>
+
+      <div class="card-actions justify-end mt-4">
+        <a routerLink="/proveedores" class="btn btn-ghost">Cancelar</a>
+        <button class="btn btn-primary" (click)="registrar()" [disabled]="cargando || !proveedor.nombre">
+          <span *ngIf="cargando" class="loading loading-spinner"></span>
+          Guardar Proveedor
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

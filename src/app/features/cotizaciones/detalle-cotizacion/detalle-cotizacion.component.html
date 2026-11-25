@@ -1,0 +1,348 @@
+<div
+  class="min-h-screen bg-base-200 text-base-content p-4 sm:p-6"
+  [attr.data-theme]="temaService.temaActual()"
+>
+  <div class="max-w-6xl mx-auto">
+    <div class="mb-2">
+      <app-breadcrumbs />
+    </div>
+
+    <div *ngIf="cargando" class="text-center py-12">
+      <span class="loading loading-spinner text-primary loading-lg"></span>
+    </div>
+
+    <ng-container *ngIf="!cargando && cotizacion">
+      <!-- Encabezado Superior con Acciones Accesibles -->
+      <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-sm mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <a
+            routerLink="/cotizaciones"
+            class="btn btn-circle btn-ghost btn-sm"
+            title="Volver al historial de cotizaciones"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+          </a>
+          <div>
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <h2 class="text-2xl sm:text-3xl font-bold m-0">
+                Folio #{{ cotizacion.idCotizacion | number:'3.0-0' }}
+              </h2>
+              <div
+                class="badge font-semibold"
+                [ngClass]="{
+                  'badge-warning': cotizacion.estado === 'Pendiente',
+                  'badge-success text-white': cotizacion.estado === 'Aprobada',
+                  'badge-error text-white': cotizacion.estado === 'Rechazada'
+                }"
+              >
+                {{ cotizacion.estado }}
+              </div>
+            </div>
+            <p class="text-sm text-base-content/70 mt-0.5">
+              Cliente: <strong class="text-base-content">{{ cotizacion.nombreClienteCompleto }}</strong> ·
+              Total: <strong class="text-success">${{ cotizacion.total | number:'1.2-2' }} MXN</strong>
+            </p>
+          </div>
+        </div>
+
+        <!-- Botones de Acción Rápida Arriba -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            class="btn btn-sm sm:btn-md btn-outline btn-primary rounded-xl"
+            (click)="descargarPDF()"
+            [disabled]="generandoPDF"
+          >
+            <span *ngIf="generandoPDF" class="loading loading-spinner loading-sm"></span>
+            <svg *ngIf="!generandoPDF" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Descargar PDF
+          </button>
+
+          <ng-container *ngIf="cotizacion.estado === 'Pendiente'">
+            <button
+              type="button"
+              class="btn btn-sm sm:btn-md btn-outline btn-error rounded-xl"
+              (click)="abrirModalRechazo()"
+            >
+              Rechazar
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm sm:btn-md btn-success text-white rounded-xl shadow-sm"
+              (click)="abrirModalAprobacion()"
+            >
+              Aprobar y Crear Evento
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- CONTENEDOR DEL PDF -->
+      <div id="documento-pdf" class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-base-300 mb-6">
+        <div class="border-b border-gray-200 pb-6 mb-6 flex justify-between items-center gap-4 flex-wrap">
+          <div>
+            <h1 class="text-3xl font-black text-primary m-0">OrgEventos</h1>
+            <p class="text-gray-500 text-sm">Tu evento, nuestra pasión.</p>
+          </div>
+          <div class="text-right">
+            <p class="text-lg font-bold text-gray-800">Presupuesto Formal</p>
+            <p class="text-gray-500">Folio: #{{ cotizacion.idCotizacion | number:'3.0-0' }}</p>
+          </div>
+        </div>
+
+        <!-- Datos Maestros -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div>
+            <span class="text-sm text-gray-500 font-semibold block">PREPARADO PARA:</span>
+            <span class="text-xl font-bold text-gray-800">{{ cotizacion.nombreClienteCompleto }}</span>
+          </div>
+          <div class="md:text-right">
+            <span class="text-sm text-gray-500 font-semibold block">FECHA DE EMISIÓN:</span>
+            <span class="text-lg text-gray-800">{{ cotizacion.fecha }}</span>
+          </div>
+        </div>
+
+        <!-- Servicios Internos -->
+        <div class="mb-8 overflow-x-auto" *ngIf="cotizacion.serviciosInternos.length > 0">
+          <h3 class="bg-primary text-white p-3 px-5 font-bold rounded-t-xl m-0">Servicios de Agencia</h3>
+          <table class="table w-full border border-gray-200 border-t-0">
+            <thead class="bg-gray-50 text-gray-700">
+              <tr>
+                <th>Concepto</th>
+                <th class="text-center w-24">Cant.</th>
+                <th class="text-right w-32">Precio Unit.</th>
+                <th class="text-right w-32">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let si of cotizacion.serviciosInternos" class="border-b border-gray-100">
+                <td class="font-medium text-gray-800">{{ si.nombreServicio }}</td>
+                <td class="text-center text-gray-800">{{ si.cantidad }}</td>
+                <td class="text-right text-gray-800">${{ si.precioUnitario | number:'1.2-2' }}</td>
+                <td class="text-right font-semibold text-gray-800">${{ si.subtotal | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Servicios Externos -->
+        <div class="mb-8 overflow-x-auto" *ngIf="cotizacion.serviciosExternos.length > 0">
+          <h3 class="bg-secondary text-white p-3 px-5 font-bold rounded-t-xl m-0">Servicios de Proveedores</h3>
+          <table class="table w-full border border-gray-200 border-t-0">
+            <thead class="bg-gray-50 text-gray-700">
+              <tr>
+                <th>Concepto</th>
+                <th>Proveedor</th>
+                <th class="text-center w-24">Cant.</th>
+                <th class="text-right w-32">Costo Cotizado</th>
+                <th class="text-right w-32">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let se of cotizacion.serviciosExternos" class="border-b border-gray-100">
+                <td>
+                  <span class="font-medium text-gray-800 block">{{ se.nombreServicioProveedor }}</span>
+                  <span class="text-xs text-gray-500" *ngIf="se.observaciones">Nota: {{ se.observaciones }}</span>
+                </td>
+                <td class="text-sm text-gray-800">{{ se.nombreEmpresaProveedor }}</td>
+                <td class="text-center text-gray-800">{{ se.cantidad }}</td>
+                <td class="text-right text-gray-800">${{ se.precioCotizado | number:'1.2-2' }}</td>
+                <td class="text-right font-semibold text-gray-800">${{ se.subtotal | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Gran Total -->
+        <div class="flex justify-end mt-4">
+          <div class="text-right bg-gray-50 p-6 rounded-xl border border-gray-200 min-w-[280px]">
+            <span class="text-gray-500 font-semibold block mb-1">GRAN TOTAL (MXN)</span>
+            <span class="text-4xl font-black text-primary">${{ cotizacion.total | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- Pie de página del documento -->
+        <div class="mt-12 text-center border-t border-gray-200 pt-6 pb-2">
+          <p class="text-xs text-gray-500 font-medium mb-3">
+            Este documento es una cotización formal y está sujeta a disponibilidad de fechas y proveedores.
+          </p>
+          <div class="inline-block bg-red-50 text-red-700 font-semibold text-xs px-4 py-2 rounded-lg border border-red-200">
+            ⚠️ IMPORTANTE: Para garantizar la disponibilidad del mobiliario y servicios, esta reserva caducará automáticamente si no se registra el pago del anticipo en un plazo de 48 horas.
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<!-- MODAL DE APROBACIÓN (DaisyUI) -->
+<dialog id="modal_aprobar" class="modal">
+  <div class="modal-box max-w-xl">
+    <h3 class="font-bold text-xl mb-4 text-base-content">Detalles Operativos del Evento</h3>
+    <p class="text-sm text-base-content/70 mb-4">
+      Ingresa la información inicial para generar la orden del evento, el contrato y la programación de pagos.
+    </p>
+
+    <form (ngSubmit)="confirmarAprobacion()" #formAprobacion="ngForm" class="flex flex-col gap-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Nombre del Evento</span></label>
+        <input type="text" class="input input-bordered w-full" placeholder="Ej. Boda Civil Martínez - López"
+               [(ngModel)]="datosEvento.nombreEvento" name="nombreEvento" required />
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="form-control">
+          <label class="label"><span class="label-text font-semibold">Tipo de Evento</span></label>
+          <select class="select select-bordered w-full" [(ngModel)]="datosEvento.idTipoEvento" name="idTipoEvento" required>
+            <option *ngFor="let t of tiposEvento" [value]="t.idTipoEvento">
+              {{ t.nombre }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-control w-full">
+          <label class="label"><span class="label-text font-semibold">Fecha de Inicio</span></label>
+          <input type="datetime-local" class="input input-bordered w-full"
+                 [(ngModel)]="datosEvento.fechaEvento" name="fechaEvento" required
+                 [min]="minFechaEvento" />
+
+          <div *ngIf="avisoFechaOcupada" class="mt-2 p-3 bg-error/10 text-error border border-error/20 rounded-lg text-sm flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5 mt-0.5" fill="none" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <span class="font-bold">Atención:</span> {{ avisoFechaOcupada }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-control w-full">
+        <label class="label">
+          <span class="label-text font-semibold">Fecha de Fin (Opcional · eventos de varios días)</span>
+          <span class="label-text-alt text-primary font-semibold" *ngIf="fechaFinEvento">
+            Duración: {{ duracionDias }} {{ duracionDias === 1 ? 'día' : 'días' }}
+          </span>
+        </label>
+        <input type="date" class="input input-bordered w-full"
+               [(ngModel)]="fechaFinEvento" name="fechaFinEvento"
+               [min]="datosEvento.fechaEvento ? datosEvento.fechaEvento.split('T')[0] : ''" />
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="form-control">
+          <label class="label"><span class="label-text font-semibold">Lugar / Salón</span></label>
+          <input type="text" class="input input-bordered w-full" placeholder="Ej. Hacienda San Juan"
+                 [(ngModel)]="datosEvento.lugar" name="lugar" required />
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Número de Invitados</span>
+            <label class="label-text-alt cursor-pointer flex items-center gap-1.5">
+              <input type="checkbox" class="checkbox checkbox-xs checkbox-primary"
+                     [(ngModel)]="entradaLibre" name="entradaLibre"
+                     (change)="onToggleEntradaLibre()" />
+              <span>Entrada libre</span>
+            </label>
+          </label>
+          <input type="number" [min]="entradaLibre ? 0 : 1" class="input input-bordered w-full"
+                 [disabled]="entradaLibre"
+                 [(ngModel)]="datosEvento.numeroInvitados" name="numeroInvitados"
+                 [required]="!entradaLibre" />
+                 <label class="label pt-1 pb-0">
+  <span class="label-text-alt text-base-content/60">
+    Confirma el aforo final: si hay servicios "Por persona", se calcularán con este número al crear el evento.
+  </span>
+</label>
+        </div>
+      </div>
+
+      <div class="form-control w-full mt-1">
+        <label class="label"><span class="label-text font-semibold">Plan de Pagos</span></label>
+        <select class="select select-bordered w-full" [(ngModel)]="datosEvento.numeroCuotas" name="numeroCuotas" required>
+          <option [ngValue]="1">Pago Único (100% hoy al confirmar)</option>
+          <option [ngValue]="2">En 2 partes (10% Anticipo hoy + 90% Finiquito)</option>
+          <option [ngValue]="3">En 3 partes (10% Anticipo hoy + 2 pagos restantes)</option>
+          <option [ngValue]="4">En 4 partes (10% Anticipo hoy + 3 pagos restantes)</option>
+        </select>
+        <label class="label">
+          <span class="label-text-alt text-gray-500">
+            *El sistema calculará automáticamente las fechas y montos.
+          </span>
+        </label>
+      </div>
+
+      <!-- IMAGEN DE REFERENCIA OPCIONAL DEL EVENTO -->
+      <div class="form-control w-full">
+        <label class="label">
+          <span class="label-text font-semibold">Imagen de Referencia del Evento (Opcional)</span>
+        </label>
+
+        <div *ngIf="!previewFotoEvento" class="border-2 border-dashed border-base-300 rounded-xl p-4 text-center bg-base-200/40">
+          <p class="text-xs text-base-content/70 mb-2">
+            Sube una foto del salón, montaje o referencia visual (JPG, PNG o WEBP).
+          </p>
+          <label class="btn btn-sm btn-outline btn-primary cursor-pointer">
+            Seleccionar imagen
+            <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp" (change)="onSeleccionarFotoEvento($event)" />
+          </label>
+        </div>
+
+        <div *ngIf="previewFotoEvento" class="relative rounded-xl overflow-hidden border border-base-300 bg-base-200">
+          <img [src]="previewFotoEvento" alt="Vista previa del evento" class="w-full h-40 object-cover" />
+          <div class="absolute top-2 right-2 flex gap-1.5">
+            <label class="btn btn-xs bg-black/70 text-white border-none hover:bg-black cursor-pointer">
+              Cambiar
+              <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp" (change)="onSeleccionarFotoEvento($event)" />
+            </label>
+            <button type="button" class="btn btn-xs btn-error text-white" (click)="quitarFotoEvento()">
+              Quitar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" class="btn" (click)="cerrarModalAprobacion()">Cancelar</button>
+        <button type="submit" class="btn btn-success text-white" [disabled]="procesandoAprobacion">
+          <span *ngIf="procesandoAprobacion" class="loading loading-spinner"></span>
+          Confirmar y Crear Evento
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- MODAL DE RECHAZO (DaisyUI) -->
+<dialog id="modal_rechazar" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4 text-base-content flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-warning shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      Rechazar Cotización
+    </h3>
+
+    <p class="text-base text-base-content mb-4">
+      ¿Estás seguro de que deseas rechazar la cotización para <strong>{{ cotizacion?.nombreClienteCompleto }}</strong>?
+    </p>
+
+    <p class="text-sm text-base-content/60 mb-6">
+      La cotización cambiará su estado a rechazada y no se generará ningún evento ni contrato en el sistema.
+    </p>
+
+    <div class="modal-action">
+      <button type="button" class="btn btn-ghost" (click)="cerrarModalRechazo()">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-error text-white" (click)="confirmarRechazo()">
+        Sí, Rechazar
+      </button>
+    </div>
+  </div>
+</dialog>

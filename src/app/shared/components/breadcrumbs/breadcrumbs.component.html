@@ -1,0 +1,12 @@
+<nav *ngIf="items().length > 0" aria-label="Breadcrumb" class="text-sm breadcrumbs py-1">
+  <ul>
+    <li *ngFor="let item of items(); let last = last">
+      <a *ngIf="!last" [routerLink]="item.url" class="link link-hover opacity-80">
+        {{ item.label }}
+      </a>
+      <span *ngIf="last" class="font-semibold text-base-content">
+        {{ item.label }}
+      </span>
+    </li>
+  </ul>
+</nav>

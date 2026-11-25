@@ -1,0 +1,173 @@
+<div
+  class="p-6 min-h-screen bg-base-200 text-base-content"
+  [attr.data-theme]="temaService.temaActual()"
+>
+  <!-- Breadcrumbs de ubicación -->
+  <div class="text-sm breadcrumbs mb-2 opacity-80">
+    <ul>
+      <li><a routerLink="/dashboard" class="hover:underline">Panel de Control</a></li>
+      <li class="font-semibold">Clientes</li>
+    </ul>
+  </div>
+
+  <!-- Encabezado con flecha de regreso y botón -->
+  <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+    <div class="flex items-center gap-3">
+      <a routerLink="/dashboard" class="btn btn-circle btn-ghost btn-sm" title="Regresar al Panel de Control">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </a>
+      <h2 class="text-3xl font-bold text-base-content m-0">Directorio de Clientes</h2>
+    </div>
+
+    <a routerLink="/clientes/nuevo" class="btn btn-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      Nuevo Cliente
+    </a>
+  </div>
+
+  <div class="card bg-base-100 shadow-md border border-base-300 rounded-2xl">
+    <div class="card-body p-0 overflow-x-auto">
+
+      <!-- Sección del Buscador -->
+      <div class="p-4 border-b border-base-300 bg-base-100 rounded-t-2xl">
+        <div class="form-control w-full max-w-md">
+          <div class="relative">
+            <input
+              type="text"
+              placeholder="Buscar por nombre o correo..."
+              class="input input-bordered w-full pl-10"
+              [(ngModel)]="terminoBusqueda"
+              (input)="filtrarClientes()"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute top-3 left-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicador de carga -->
+      <div *ngIf="cargando" class="p-10 text-center">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+
+      <!-- Tabla de Clientes -->
+      <table *ngIf="!cargando" class="table table-zebra w-full">
+        <thead class="bg-base-200 text-base-content text-sm">
+          <tr>
+            <th>Nombre Completo</th>
+            <th>Contacto</th>
+            <th>Fecha de Registro</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="clientesFiltrados.length === 0">
+            <td colspan="5" class="text-center py-6 opacity-70">No se encontraron clientes.</td>
+          </tr>
+
+          <tr *ngFor="let cliente of clientesFiltrados">
+            <td class="font-medium">{{ cliente.nombreCompleto }}</td>
+            <td>
+              <div class="text-sm">{{ cliente.correoContacto }}</div>
+              <div class="text-xs opacity-70">{{ cliente.telefono || 'Sin teléfono' }}</div>
+            </td>
+            <td class="whitespace-nowrap">{{ cliente.fechaRegistro | date:'dd/MM/yyyy' }}</td>
+            <td class="whitespace-nowrap">
+              <span
+                class="badge rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap"
+                [ngClass]="
+                  cliente.activo
+                    ? (temaService.esOscuro() ? 'badge-success badge-outline' : 'badge-success text-white')
+                    : (temaService.esOscuro() ? 'badge-error badge-outline' : 'badge-error text-white')
+                "
+              >
+                {{ cliente.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td class="whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary toggle-sm"
+                  [checked]="cliente.activo"
+                  (click)="$event.preventDefault(); abrirModal(cliente)"
+                  [title]="cliente.activo ? 'Desactivar cliente' : 'Activar cliente'"
+                />
+
+                <a
+                  [routerLink]="['/clientes/editar', cliente.idCliente]"
+                  class="btn btn-ghost btn-sm btn-square text-primary hover:bg-primary/15"
+                  title="Editar datos del cliente"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                </a>
+
+                <a
+                  [routerLink]="['/clientes', cliente.idCliente, 'finanzas']"
+                  class="btn btn-square btn-ghost btn-sm text-success hover:bg-success/15"
+                  title="Ver Estado de Cuenta del cliente"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmación de Estado -->
+<div class="modal" [class.modal-open]="modalAbierto">
+  <div class="modal-box">
+
+    <h3 class="font-bold text-xl flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      {{ estadoPendiente ? 'Activar' : 'Desactivar' }} Cliente
+    </h3>
+
+    <div class="py-4 text-base-content/80" *ngIf="clienteSeleccionado">
+      <p *ngIf="!estadoPendiente">
+        ¿Estás seguro de que deseas desactivar el acceso para <strong>{{ clienteSeleccionado.nombreCompleto }}</strong>?
+        <br><br>
+        Al hacerlo, <strong>se le denegará el inicio de sesión</strong> al sistema, pero su historial de eventos, pagos y cotizaciones se mantendrá seguro en la base de datos.
+      </p>
+
+      <p *ngIf="estadoPendiente">
+        ¿Estás seguro de que deseas reactivar el acceso para <strong>{{ clienteSeleccionado.nombreCompleto }}</strong>?
+        <br><br>
+        El cliente podrá iniciar sesión inmediatamente utilizando sus credenciales actuales.
+      </p>
+    </div>
+
+    <div class="modal-action">
+      <button type="button" class="btn btn-ghost" (click)="cerrarModal()">Cancelar</button>
+      <button
+        type="button"
+        class="btn"
+        [ngClass]="estadoPendiente ? 'btn-success text-white' : 'btn-error text-white'"
+        (click)="confirmarCambio()"
+      >
+        Sí, {{ estadoPendiente ? 'Activar' : 'Desactivar' }}
+      </button>
+    </div>
+
+  </div>
+  <form method="dialog" class="modal-backdrop" (click)="cerrarModal()">
+    <button type="button">cerrar</button>
+  </form>
+</div>

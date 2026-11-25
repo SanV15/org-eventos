@@ -1,0 +1,253 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="mb-2">
+    <app-breadcrumbs />
+  </div>
+
+  <div class="mb-6 flex items-center gap-3">
+    <a routerLink="/dashboard" class="btn btn-circle btn-ghost btn-sm" title="Regresar al Panel de Control">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+      </svg>
+    </a>
+    <div>
+      <h2 class="text-3xl font-bold text-base-content m-0">Pagos y Caja General</h2>
+      <p class="text-base-content/70 text-sm">Visión global contable, ingresos reales y cuentas por cobrar.</p>
+    </div>
+  </div>
+
+  <div *ngIf="cargando" class="flex justify-center py-12">
+    <span class="loading loading-spinner text-primary loading-lg"></span>
+  </div>
+
+  <div *ngIf="!cargando && errorMensaje" class="alert alert-error shadow-lg mb-6">
+    <span>{{ errorMensaje }}</span>
+  </div>
+
+  <ng-container *ngIf="!cargando && resumen">
+    <!-- Indicadores Financieros (KPIs) -->
+    <div class="stats shadow w-full mb-8 bg-base-100 border border-base-300">
+      <div class="stat text-center">
+        <div class="stat-title text-base-content/60 font-semibold">Total en Caja (Ingresado)</div>
+        <div class="stat-value text-success">${{ resumen.totalEnCaja | number:'1.2-2' }}</div>
+        <div class="stat-desc">Dinero real en cuentas</div>
+      </div>
+
+      <div class="stat text-center border-l border-base-200">
+        <div class="stat-title text-base-content/60 font-semibold">Cuentas por Cobrar</div>
+        <div class="stat-value text-error">${{ resumen.cuentasPorCobrar | number:'1.2-2' }}</div>
+        <div class="stat-desc">Saldos pendientes (Contratos Activos)</div>
+      </div>
+
+      <div class="stat text-center border-l border-base-200">
+        <div class="stat-title text-base-content/60 font-semibold">Egresos a Proveedores</div>
+        <div class="stat-value text-warning">${{ resumen.egresosTotales | number:'1.2-2' }}</div>
+        <div class="stat-desc">Capital invertido en servicios externos</div>
+      </div>
+    </div>
+
+    <!-- Navegación de Pestañas -->
+    <div class="tabs tabs-boxed mb-6 bg-base-200 p-2 inline-flex gap-1">
+      <a class="tab tab-lg"
+         [ngClass]="{'tab-active bg-primary text-primary-content font-bold': pestanaActiva === 'flujo'}"
+         (click)="cambiarPestana('flujo')">Flujo de Caja (Libro Mayor)</a>
+      <a class="tab tab-lg"
+         [ngClass]="{'tab-active bg-primary text-primary-content font-bold': pestanaActiva === 'cobranza'}"
+         (click)="cambiarPestana('cobranza')">Cobranza Activa</a>
+      <a class="tab tab-lg"
+         [ngClass]="{'tab-active bg-primary text-primary-content font-bold': pestanaActiva === 'proveedores'}"
+         (click)="cambiarPestana('proveedores')">Pagos a Proveedores</a>
+    </div>
+
+    <!-- PESTAÑA 1: Flujo de Caja -->
+    <div *ngIf="pestanaActiva === 'flujo'" class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
+      <table class="table w-full">
+        <thead class="bg-base-200 text-base-content/80">
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Entidad (Cliente/Proveedor)</th>
+            <th>Concepto</th>
+            <th class="text-right">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of transacciones" class="hover:bg-base-200/50">
+            <td>{{ t.fecha | date:'mediumDate' }}</td>
+            <td>
+              <span class="badge font-semibold whitespace-nowrap" [ngClass]="t.tipo === 'Ingreso' ? 'badge-success badge-outline' : 'badge-error badge-outline'">
+                {{ t.tipo }}
+              </span>
+            </td>
+            <td class="font-medium">{{ t.entidad }}</td>
+            <td class="text-sm text-base-content/70">{{ t.concepto }}</td>
+            <td class="text-right font-bold whitespace-nowrap" [ngClass]="t.tipo === 'Ingreso' ? 'text-success' : 'text-error'">
+              {{ t.tipo === 'Ingreso' ? '+' : '-' }}${{ t.monto | number:'1.2-2' }}
+            </td>
+          </tr>
+          <tr *ngIf="transacciones.length === 0">
+            <td colspan="5" class="text-center py-8 text-base-content/60">No hay transacciones registradas.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PESTAÑA 2: Cobranza Activa -->
+    <div *ngIf="pestanaActiva === 'cobranza'" class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
+      <table class="table w-full">
+        <thead class="bg-base-200 text-base-content/80">
+          <tr>
+            <th>Folio</th>
+            <th>Cliente y Evento</th>
+            <th>Total Acordado</th>
+            <th>Saldo Pendiente</th>
+            <th>Próximo Vencimiento</th>
+            <th class="text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of cobranza" class="hover:bg-base-200/50">
+            <td class="font-semibold text-base-content/70">#{{ c.idContrato | number:'3.0-0' }}</td>
+            <td>
+              <div class="font-bold">{{ c.cliente }}</div>
+              <div class="text-xs text-base-content/60">{{ c.nombreEvento }}</div>
+            </td>
+            <td>${{ c.totalContrato | number:'1.2-2' }}</td>
+            <td class="font-bold text-error">${{ c.saldoPendiente | number:'1.2-2' }}</td>
+            <td>
+              <div *ngIf="c.proximoVencimiento">
+                <div>{{ c.proximoVencimiento | date:'mediumDate' }}</div>
+                <span class="badge badge-sm mt-1 whitespace-nowrap"
+                     [ngClass]="{'badge-error badge-outline': c.estadoMorosidad === 'Atrasado', 'badge-warning badge-outline': c.estadoMorosidad === 'Vence hoy', 'badge-success badge-outline': c.estadoMorosidad === 'Al día'}">
+                  {{ c.estadoMorosidad }}
+                </span>
+              </div>
+              <div *ngIf="!c.proximoVencimiento" class="text-base-content/50 text-sm">Sin cuotas pendientes</div>
+            </td>
+            <td class="text-right">
+              <a [routerLink]="['/clientes', c.idCliente, 'finanzas']" class="btn btn-sm btn-outline btn-primary">Ver Cuenta</a>
+            </td>
+          </tr>
+          <tr *ngIf="cobranza.length === 0">
+            <td colspan="6" class="text-center py-8 text-base-content/60">No hay saldos pendientes por cobrar.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PESTAÑA 3: Pagos a Proveedores -->
+    <div *ngIf="pestanaActiva === 'proveedores'" class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
+      <table class="table w-full">
+        <thead class="bg-base-200 text-base-content/80">
+          <tr>
+            <th>Evento</th>
+            <th>Proveedor</th>
+            <th>Servicio Contratado</th>
+            <th>Costo Acordado</th>
+            <th>Abonado</th>
+            <th>Saldo Pendiente</th>
+            <th class="text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of proveedores" class="hover:bg-base-200/50">
+            <td class="font-bold">{{ item.evento }}</td>
+            <td class="font-semibold text-primary">{{ item.proveedor }}</td>
+            <td>{{ item.servicio }}</td>
+            <td>${{ item.costoAcordado | number:'1.2-2' }}</td>
+            <td class="text-success">${{ item.montoPagado | number:'1.2-2' }}</td>
+            <td class="font-bold text-error">${{ item.saldoPendiente | number:'1.2-2' }}</td>
+            <td class="text-right">
+              <button class="btn btn-sm btn-error text-error-content" (click)="abrirModalPagoProveedor(item)">
+                Liquidar / Abonar
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="proveedores.length === 0">
+            <td colspan="7" class="text-center py-8 text-base-content/60">No hay egresos pendientes a proveedores.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- MODAL DE PAGO A PROVEEDOR (EGRESOS) -->
+<dialog id="modal_pago_proveedor" class="modal">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-xl mb-4 text-base-content border-b border-base-300 pb-2">Registrar Pago a Proveedor</h3>
+
+    <form (ngSubmit)="confirmarPagoProveedor()" #pagoProvForm="ngForm">
+      <div class="form-control w-full mb-4 mt-2">
+        <label class="label"><span class="label-text font-semibold">Monto a pagar (MXN)</span></label>
+        <input
+          type="number"
+          class="input input-bordered w-full"
+          [(ngModel)]="datosPagoProveedor.montoPagado"
+          name="montoPagado"
+          [max]="saldoRestanteProveedor"
+          required>
+        <label class="label">
+          <span class="label-text-alt opacity-70">Saldo pendiente: ${{ saldoRestanteProveedor | number:'1.2-2' }}</span>
+        </label>
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label"><span class="label-text font-semibold">Método de Pago</span></label>
+        <select class="select select-bordered w-full" [(ngModel)]="datosPagoProveedor.metodoPago" name="metodoPago" required>
+          <option value="Transferencia">Transferencia Bancaria (SPEI)</option>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Tarjeta">Tarjeta Corporativa / Débito</option>
+        </select>
+      </div>
+
+      <div *ngIf="datosPagoProveedor.metodoPago === 'Transferencia' && (!proveedorSeleccionado?.clabeInterbancaria || proveedorSeleccionado?.clabeInterbancaria === '')"
+           class="alert alert-warning text-xs p-3 mb-4 rounded-lg flex items-start gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5 mt-0.5" fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <span class="font-bold block">Proveedor sin CLABE interbancaria</span>
+          <span>El movimiento se registrará en el Libro Mayor como egreso por transferencia, pero deberás solicitar la CLABE al proveedor para futuros depósitos.</span>
+        </div>
+      </div>
+
+      <div *ngIf="datosPagoProveedor.metodoPago === 'Transferencia'" class="bg-base-200 p-4 rounded-lg mb-4 border border-base-300">
+        <div class="text-xs font-bold uppercase text-primary mb-2 flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          Datos de Depósito del Proveedor
+        </div>
+        <div class="text-sm space-y-1.5">
+          <div class="flex justify-between">
+            <span class="text-base-content/70">Banco:</span>
+            <span class="font-bold">{{ proveedorSeleccionado?.banco || 'No registrado' }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-base-content/70">CLABE:</span>
+            <code class="bg-base-300 px-2 py-0.5 rounded font-mono font-bold text-xs select-all">
+              {{ proveedorSeleccionado?.clabeInterbancaria || 'No registrada' }}
+            </code>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-base-content/70">Titular:</span>
+            <span class="font-semibold">{{ proveedorSeleccionado?.titularCuenta || proveedorSeleccionado?.proveedor }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-control w-full mb-6">
+        <label class="label"><span class="label-text font-semibold">Fecha de Emisión</span></label>
+        <input type="date" class="input input-bordered w-full" [(ngModel)]="datosPagoProveedor.fechaPago" name="fechaPago" required>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" (click)="cerrarModalPagoProveedor()">Cancelar</button>
+        <button type="submit" class="btn btn-error text-error-content" [disabled]="pagoProvForm.invalid || procesandoPagoProveedor">
+          <span *ngIf="procesandoPagoProveedor" class="loading loading-spinner"></span>
+          Confirmar Egreso
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

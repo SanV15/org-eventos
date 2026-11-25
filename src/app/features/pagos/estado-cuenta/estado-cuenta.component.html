@@ -1,0 +1,235 @@
+
+
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="mb-2">
+    <app-breadcrumbs />
+  </div>
+  
+  <div class="p-6">
+  <!-- ENCABEZADO CON BOTÓN DE REGRESO Y BADGE -->
+  <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+    <div class="flex items-center gap-3">
+      <a routerLink="/pagos" class="btn btn-circle btn-ghost btn-sm" title="Regresar">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </a>
+      <div>
+        <h2 class="text-3xl font-bold text-base-content m-0" *ngIf="resumen">
+          Estado de Cuenta: <span class="text-primary">{{ resumen.nombreCliente }}</span>
+        </h2>
+        <p class="text-base-content/70 mt-1 text-sm">Gestión financiera del contrato y cobros al cliente.</p>
+      </div>
+    </div>
+
+    <!-- ACCIONES DE LA CABECERA (Badge y Botón de Contrato) -->
+    <div class="flex items-center gap-3">
+      <!-- 📄 BOTÓN DE VER CONTRATO AQUÍ ARRIBA -->
+<!-- Botón limpio en la cabecera -->
+<button type="button" class="btn btn-outline btn-primary btn-sm gap-2" (click)="descargarContratoPDF()">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+  Descargar Contrato PDF
+</button>
+      <!-- BADGE DE ESTADO -->
+      <div class="badge badge-primary badge-lg font-bold" *ngIf="!cargando && !sinContrato && resumen">
+        {{ resumen.estadoContrato }}
+      </div>
+    </div>
+  </div>
+  
+
+  <!-- ESTADO DE CARGA -->
+  <div *ngIf="cargando" class="flex justify-center my-10">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+  </div>
+
+  <!-- MENSAJE SI NO HAY CONTRATO -->
+  <div *ngIf="!cargando && sinContrato" class="alert alert-warning shadow-lg">
+    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+    <div>
+      <h3 class="font-bold">Sin contrato activo</h3>
+      <div class="text-xs">Este cliente aún no tiene un evento con plan de pagos registrado en el sistema.</div>
+    </div>
+  </div>
+
+  <div *ngIf="!cargando && errorMensaje" class="alert alert-error shadow-lg" role="alert">
+    <span>{{ errorMensaje }}</span>
+  </div>
+
+  <!-- CONTENIDO REAL (Se muestra solo si hay contrato) -->
+  <div *ngIf="!cargando && !sinContrato && !errorMensaje && resumen">
+    
+    <!-- TARJETAS DE RESUMEN (Unificadas y corregidas) -->
+    <div class="stats shadow-xl w-full mb-8 bg-base-100">
+      <div class="stat place-items-center">
+        <div class="stat-title">Total del Contrato</div>
+        <div class="stat-value text-base-content">{{ resumen.total | currency }}</div>
+      </div>
+      
+      <div class="stat place-items-center">
+        <div class="stat-title">Abonado</div>
+        <div class="stat-value text-success">{{ resumen.pagado | currency }}</div>
+      </div>
+      
+      <div class="stat place-items-center">
+        <div class="stat-title">Saldo Restante</div>
+        <div class="stat-value text-error">{{ resumen.restante | currency }}</div>
+      </div>
+    </div>
+
+    <!-- ALERTA DE ANTICIPO REQUERIDO -->
+    <!-- ALERTA DE PAGO REQUERIDO (Dinámica) -->
+<div *ngIf="resumen.estadoContrato === 'Pendiente'" class="alert alert-warning shadow-lg w-full mb-6">
+  <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+  
+  <div>
+    <!-- Título si hay varias cuotas -->
+    <h3 class="font-bold" *ngIf="(resumen.cuotas || cuotas).length > 1">
+      Contrato en Reserva (Pendiente de Anticipo)
+    </h3>
+    <!-- Título si es un solo pago -->
+    <h3 class="font-bold" *ngIf="(resumen.cuotas || cuotas).length === 1">
+      Contrato en Reserva (Pendiente de Pago Total)
+    </h3>
+
+    <!-- Subtítulo si hay varias cuotas -->
+    <div class="text-xs" *ngIf="(resumen.cuotas || cuotas).length > 1">
+      Este evento no está confirmado. Registre el abono del anticipo (Cuota #1) para activar el contrato.
+    </div>
+    <!-- Subtítulo si es un solo pago -->
+    <div class="text-xs" *ngIf="(resumen.cuotas || cuotas).length === 1">
+      Este evento no está confirmado. Registre el pago total para activar el contrato y apartar la fecha.
+    </div>
+  </div>
+</div>
+
+    <!-- TABLA DE PLAN DE PAGOS -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body p-0">
+        <div class="overflow-x-auto">
+          <table class="table w-full">
+            <thead class="bg-base-200">
+              <tr>
+                <th># Cuota</th>
+                <th>Fecha Límite</th>
+                <th>Total Cuota</th>
+                <th>Abonado</th>
+                <th>Restante</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- El operador || cuotas cubre el caso de que la variable en el TS se llame diferente -->
+              <tr *ngFor="let cuota of (resumen.cuotas || cuotas); let i = index" class="hover">
+                
+                <!-- 1. NÚMERO Y ETIQUETA DE ANTICIPO -->
+                <!-- 1. NÚMERO Y ETIQUETA DINÁMICA -->
+<td>
+  <div class="font-bold">{{ cuota.numeroCuota }}</div>
+  
+  <!-- Caso A: Es la primera cuota Y HAY MÁS cuotas (es decir, sí hubo fraccionamiento) -->
+  <span *ngIf="cuota.numeroCuota === 1 && (resumen.cuotas || cuotas).length > 1" class="badge badge-warning badge-xs mt-1 font-semibold">
+    Anticipo 10%
+  </span>
+
+  <!-- Caso B: Es la primera cuota Y ES LA ÚNICA (Pago total de contado) -->
+  <span *ngIf="cuota.numeroCuota === 1 && (resumen.cuotas || cuotas).length === 1" class="badge badge-warning badge-xs mt-1 font-semibold">
+    Pago Único (100%)
+  </span>
+
+  <!-- Caso C: Es la última cuota (Finiquito) -->
+  <span *ngIf="cuota.numeroCuota > 1 && i === ((resumen.cuotas || cuotas).length - 1)" class="badge badge-ghost badge-xs mt-1">
+    Finiquito
+  </span>
+</td>
+
+                <!-- 2. FECHA -->
+                <td>{{ cuota.fechaLimite | date:'mediumDate' }}</td>
+
+                <!-- 3. DESGLOSE DEL DINERO DE ESTA CUOTA -->
+                <td class="font-semibold">{{ cuota.montoTotal | currency }}</td>
+                <td class="text-success">{{ cuota.montoAbonado | currency }}</td>
+                <td class="font-bold" [ngClass]="{'text-error': cuota.saldoRestante > 0, 'text-gray-400': cuota.saldoRestante === 0}">
+                  {{ cuota.saldoRestante | currency }}
+                </td>
+
+                <!-- 4. ESTADO Y BOTÓN -->
+                <td>
+                  <span class="badge font-semibold" [ngClass]="{'badge-success text-white': cuota.estado === 'Pagada', 'badge-warning': cuota.estado === 'Pendiente'}">
+                    {{ cuota.estado }}
+                  </span>
+                </td>
+                <td>
+                  <button *ngIf="cuota.estado === 'Pendiente'" 
+                          class="btn btn-sm btn-success text-white" 
+                          [disabled]="i > 0 && (resumen.cuotas || cuotas)[i-1].estado !== 'Pagada'"
+                          (click)="abrirModalPago(cuota)">
+                    Registrar Abono
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- MODAL DE PAGO CLIENTE CON STRIPE -->
+<dialog id="modal_pago_cliente" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4 text-base-content border-b pb-2">Registrar Nuevo Abono</h3>
+    
+    <form (ngSubmit)="confirmarPago()" #pagoForm="ngForm">
+      
+ <!-- MONTO -->
+      <div class="form-control w-full mb-4 mt-4">
+        <label class="label"><span class="label-text font-semibold">Monto a pagar (MXN)</span></label>
+        <input type="number" 
+               class="input input-bordered w-full" 
+               [(ngModel)]="datosPago.montoPagado" 
+               name="montoPagado" 
+               [max]="saldoRestanteModal"
+               required>
+        <label class="label" *ngIf="saldoRestanteModal">
+          <span class="label-text-alt text-gray-500">Saldo restante: {{ saldoRestanteModal | currency }}</span>
+        </label>
+      </div>
+
+<!-- MÉTODO DE PAGO -->
+      <div class="form-control w-full mb-4">
+        <label class="label"><span class="label-text font-semibold">Método de Pago</span></label>
+        <select class="select select-bordered w-full" 
+                [(ngModel)]="datosPago.metodoPago" 
+                name="metodoPago" 
+                required>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+          <option value="Terminal Física">Terminal Física (Voucher)</option>
+        </select>
+      </div>
+
+      <!-- (ELIMINAMOS POR COMPLETO EL DIV DE STRIPE CARD AQUÍ) -->
+
+      <!-- FECHA DE PAGO -->
+      <div class="form-control w-full mb-6">
+        <label class="label"><span class="label-text font-semibold">Fecha de Pago</span></label>
+        <input type="date" class="input input-bordered w-full" [(ngModel)]="datosPago.fechaPago" name="fechaPago" required>
+      </div>
+
+      <!-- ACCIONES -->
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" (click)="cerrarModalPago()">Cancelar</button>
+        <button type="submit" 
+                class="btn btn-primary text-white" 
+                [disabled]="pagoForm.invalid || procesandoPago">
+          <span *ngIf="procesandoPago" class="loading loading-spinner"></span>
+          Registrar y Generar Ticket
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>

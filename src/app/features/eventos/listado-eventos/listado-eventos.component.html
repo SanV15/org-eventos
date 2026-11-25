@@ -1,0 +1,176 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="mb-2">
+    <app-breadcrumbs />
+  </div>
+
+<div class="p-6 max-w-7xl mx-auto">
+  <!-- Botón de regreso -->
+  <a
+    routerLink="/dashboard"
+    class="btn btn-ghost btn-sm mb-4 text-base-content/60 hover:text-primary"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="2"
+      stroke="currentColor"
+      class="w-4 h-4 mr-2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+      />
+    </svg>
+    Volver al Dashboard
+  </a>
+
+  <div
+    class="flex flex-col md:flex-row md:justify-between md:items-end mb-6 gap-4"
+  >
+    <div>
+      <h2 class="text-3xl font-bold text-base-content">Control de Eventos</h2>
+      <p class="text-base-content/70">
+        Monitoreo logístico y fechas de ejecución.
+      </p>
+    </div>
+
+    <!-- Buscador Integrado -->
+    <div class="flex flex-wrap items-center gap-2 bg-base-200 p-2 rounded-lg">
+      <div class="form-control">
+        <input
+          type="text"
+          placeholder="Buscar cliente o evento..."
+          class="input input-sm input-bordered w-full md:w-64"
+          [(ngModel)]="filtroNombre"
+          (input)="aplicarFiltros()"
+        />
+      </div>
+      <div class="form-control">
+        <input
+          type="date"
+          class="input input-sm input-bordered w-full md:w-40"
+          [(ngModel)]="filtroFecha"
+          (change)="aplicarFiltros()"
+        />
+      </div>
+      <button
+        class="btn btn-sm btn-ghost text-error"
+        *ngIf="filtroNombre || filtroFecha"
+        (click)="limpiarFiltros()"
+      >
+        Limpiar
+      </button>
+    </div>
+  </div>
+
+  <!-- 🟢 TABS DE CLASIFICACIÓN RÁPIDA -->
+<!-- 🟢 TABS DE CLASIFICACIÓN (Sin Activos) -->
+<div class="tabs tabs-boxed mb-6 bg-base-200 p-1 flex-wrap">
+  <a class="tab" [class.tab-active]="filtroEstado === 'TODOS'" (click)="seleccionarFiltroEstado('TODOS')">Todos</a>
+  <a class="tab" [class.tab-active]="filtroEstado === 'Pendiente'" (click)="seleccionarFiltroEstado('Pendiente')">Pendientes</a>
+  <a class="tab" [class.tab-active]="filtroEstado === 'En planificación'" (click)="seleccionarFiltroEstado('En planificación')">En Planificación</a>
+  <a class="tab" [class.tab-active]="filtroEstado === 'Cancelado'" (click)="seleccionarFiltroEstado('Cancelado')">Cancelados</a>
+</div>
+
+  <div *ngIf="cargando" class="flex justify-center py-12">
+    <span class="loading loading-spinner text-primary loading-lg"></span>
+  </div>
+
+  <div *ngIf="cargando" class="flex justify-center py-12">
+    <span class="loading loading-spinner text-primary loading-lg"></span>
+  </div>
+
+  <!-- Empty State (Sin resultados) -->
+  <div
+    *ngIf="!cargando && eventosFiltrados.length === 0"
+    class="text-center py-12 bg-base-100 rounded-box shadow"
+  >
+    <p class="text-base-content/60">
+      No se encontraron eventos con esos criterios.
+    </p>
+  </div>
+
+  <div
+    *ngIf="!cargando && eventosFiltrados.length > 0"
+    class="bg-base-100 rounded-box shadow overflow-x-auto"
+  >
+    <table class="table w-full">
+      <thead class="bg-base-200 text-base-content/80">
+        <tr>
+          <th>Folio</th>
+          <th>Cliente</th>
+          <th>Evento</th>
+          <th>Fecha de Ejecución</th>
+          <th>Estado Logístico</th>
+          <th class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- NOTA: Ahora itera sobre eventosFiltrados -->
+        <tr
+          *ngFor="let evento of eventosFiltrados"
+          class="hover:bg-base-200/50 transition-colors"
+        >
+          <td class="font-semibold text-base-content/70">
+            #{{ evento.idEvento | number: "3.0-0" }}
+          </td>
+          <td class="font-medium">{{ evento.cliente }}</td>
+          <td>{{ evento.nombreEvento }}</td>
+          <td>{{ evento.fechaEvento | date: "medium" }}</td>
+          <td>
+            <div
+              class="badge font-semibold"
+              [ngClass]="{
+                'badge-success text-white':
+                  evento.estado === 'Activo' || evento.estado === 'Confirmado',
+                'badge-warning':
+                  evento.estado === 'Pendiente' ||
+                  evento.estado === 'En planificación',
+                'badge-error text-white': evento.estado === 'Cancelado',
+                'badge-neutral': evento.estado === 'Finalizado',
+              }"
+            >
+              {{ evento.estado }}
+            </div>
+
+            <div
+              *ngIf="evento.estado === 'Pendiente'"
+              class="text-[10px] text-error mt-1 font-bold"
+            >
+              ⚠️ Expira en 48h
+            </div>
+          </td>
+<td class="text-right">
+  <div class="flex items-center justify-end gap-2">
+    <!-- Botón Cronograma existente -->
+    <button 
+      (click)="irAPlanificador(evento)"
+      [disabled]="evento.estado === 'Cancelado'"
+      class="btn btn-sm btn-outline btn-primary"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1 inline-block">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" />
+      </svg>
+      Cronograma
+    </button>
+
+    <!-- 🛑 NUEVO: Botón de Cancelar Evento (Solo aparece si el evento no está cancelado) -->
+    <button 
+      *ngIf="evento.estado !== 'Cancelado'"
+      (click)="cancelarEvento(evento)"
+      class="btn btn-sm btn-outline btn-error"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1 inline-block">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      Cancelar
+    </button>
+  </div>
+</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

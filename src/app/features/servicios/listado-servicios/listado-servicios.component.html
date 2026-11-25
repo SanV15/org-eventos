@@ -1,0 +1,129 @@
+
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="mb-2">
+    <app-breadcrumbs />
+  </div>
+
+  
+<div class="p-6 max-w-7xl mx-auto">
+  
+  <!-- CAMBIO: Encabezado con botón de regreso -->
+  <div class="flex justify-between items-center mb-6">
+    <div class="flex items-center gap-3">
+      <a routerLink="/dashboard" class="btn btn-circle btn-ghost btn-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+      </a>
+      <h2 class="text-3xl font-bold text-base-content m-0">Servicios Internos</h2>
+    </div>
+    
+    <button class="btn btn-primary" (click)="abrirModalNuevo()">
+      + Nuevo Servicio
+    </button>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl border-t-4 border-primary">
+    <div class="card-body p-0 overflow-x-auto rounded-b-xl">
+      <div *ngIf="cargando" class="text-center py-8">
+        <span class="loading loading-spinner text-primary loading-lg"></span>
+      </div>
+
+      <table *ngIf="!cargando" class="table table-zebra w-full">
+        <thead class="bg-base-200 text-base">
+          <tr>
+            <th>Nombre del Servicio</th>
+            <th>Descripción</th>
+            <th>Precio Base</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="servicios.length === 0">
+            <td colspan="5" class="text-center py-6 text-gray-500">No hay servicios internos registrados.</td>
+          </tr>
+          <tr *ngFor="let s of servicios">
+            <td class="font-bold">{{ s.nombre }}</td>
+            <td class="text-sm text-gray-500 max-w-xs truncate" [title]="s.descripcion">{{ s.descripcion || 'N/A' }}</td>
+            <td class="font-semibold text-success">${{ s.precio | number:'1.2-2' }}</td>
+            <td>
+              <div class="badge" [ngClass]="s.activo ? 'badge-success text-white' : 'badge-error text-white'">
+                {{ s.activo ? 'Activo' : 'Inactivo' }}
+              </div>
+            </td>
+            <td>
+              <div class="flex items-center gap-2">
+                <!-- CAMBIO: Ahora abre el modal de confirmación -->
+                <input type="checkbox" class="toggle toggle-sm toggle-primary" 
+                       [checked]="s.activo" 
+                       (click)="$event.preventDefault(); abrirModalConfirmacion(s)" 
+                       title="Cambiar estado" />
+                
+                <button class="btn btn-ghost btn-sm btn-square text-primary" 
+                        (click)="abrirModalEdicion(s)" title="Editar">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Principal (Nuevo / Editar) -->
+<div class="modal" [class.modal-open]="modalAbierto">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4 text-primary">
+      {{ esEdicion ? 'Editar Servicio' : 'Nuevo Servicio' }}
+    </h3>
+    
+    <ng-container *ngIf="servicioSeleccionado">
+      <div class="form-control mb-3">
+        <label class="label"><span class="label-text">Nombre del Servicio</span></label>
+        <input type="text" class="input input-bordered w-full" [(ngModel)]="servicioSeleccionado.nombre" placeholder="Ej. Honorarios de Coordinación" />
+      </div>
+      
+      <div class="form-control mb-3">
+        <label class="label"><span class="label-text">Descripción</span></label>
+        <textarea class="textarea textarea-bordered w-full" [(ngModel)]="servicioSeleccionado.descripcion" rows="2" placeholder="Detalles del servicio..."></textarea>
+      </div>
+      
+      <div class="form-control mb-6">
+        <label class="label"><span class="label-text">Precio Base</span></label>
+        <input type="number" class="input input-bordered w-full" [(ngModel)]="servicioSeleccionado.precio" />
+      </div>
+    </ng-container>
+    
+    <div class="modal-action mt-0">
+      <button class="btn btn-ghost" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardarServicio()" [disabled]="guardando || !servicioSeleccionado?.nombre">
+        <span *ngIf="guardando" class="loading loading-spinner loading-sm"></span>
+        {{ esEdicion ? 'Guardar Cambios' : 'Registrar Servicio' }}
+      </button>
+    </div>
+  </div>
+  <!-- CAMBIO: Se eliminó el click para cerrar y se usa un div opaco -->
+  <div class="modal-backdrop bg-black/30"></div>
+</div>
+
+<!-- NUEVO: Modal de Confirmación de Estado -->
+<div class="modal" [class.modal-open]="modalConfirmacionAbierto">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Confirmar acción</h3>
+    <p class="py-4" *ngIf="servicioACambiar">
+      ¿Estás seguro de que deseas <strong>{{ servicioACambiar.activo ? 'desactivar' : 'activar' }}</strong> 
+      el servicio <span class="text-primary font-semibold">{{ servicioACambiar.nombre }}</span>?
+    </p>
+    <div class="modal-action">
+      <button class="btn btn-ghost" (click)="cerrarModalConfirmacion()">Cancelar</button>
+      <button class="btn" 
+              [ngClass]="servicioACambiar?.activo ? 'btn-error text-white' : 'btn-success text-white'" 
+              (click)="confirmarCambioEstado()">
+        Sí, {{ servicioACambiar?.activo ? 'desactivar' : 'activar' }}
+      </button>
+    </div>
+  </div>
+  <!-- CAMBIO: Se eliminó el click para cerrar y se usa un div opaco -->
+  <div class="modal-backdrop bg-black/30"></div>
+</div>

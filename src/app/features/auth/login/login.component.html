@@ -1,0 +1,128 @@
+<div
+  class="relative min-h-screen overflow-hidden bg-base-200 flex items-center justify-center p-4"
+  [attr.data-theme]="temaService.temaActual()"
+>
+  <!-- Fondo decorativo difuminado -->
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-primary/20 blur-3xl"
+  ></div>
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute -bottom-28 -right-20 w-96 h-96 rounded-full bg-secondary/20 blur-3xl"
+  ></div>
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[32rem] h-[32rem] rounded-full bg-accent/10 blur-3xl"
+  ></div>
+
+  <div class="relative z-10 card w-full max-w-md bg-base-100/95 backdrop-blur-md border border-base-300 shadow-2xl rounded-2xl">
+    <div class="card-body p-6 sm:p-8">
+      <!-- Encabezado -->
+      <div class="text-center mb-6">
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight leading-snug">
+          Bienvenido al Sistema de Gestión de Eventos
+        </h1>
+        <p class="text-sm text-base-content/70 mt-1.5">
+          Ingresa tus credenciales para continuar
+        </p>
+      </div>
+
+      <!-- Formulario Reactivo -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+
+        <!-- Campo Correo -->
+        <div class="form-control w-full mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Correo electrónico</span>
+          </label>
+          <input
+            type="email"
+            formControlName="correo"
+            placeholder="admin@eventos.com"
+            class="input input-bordered w-full focus:input-primary"
+          />
+        </div>
+
+        <!-- Campo Contraseña con botón Mostrar / Ocultar -->
+        <div class="form-control w-full mb-6">
+          <label class="label">
+            <span class="label-text font-semibold">Contraseña</span>
+          </label>
+          <div class="join w-full">
+            <input
+              [type]="mostrarContrasenia ? 'text' : 'password'"
+              formControlName="contrasenia"
+              placeholder="••••••••"
+              class="input input-bordered join-item w-full focus:input-primary"
+            />
+            <button
+              type="button"
+              class="btn btn-outline join-item px-3"
+              (click)="alternarContrasenia()"
+              [attr.aria-label]="mostrarContrasenia ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              [title]="mostrarContrasenia ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            >
+              <!-- Ojo abierto -->
+              <svg
+                *ngIf="!mostrarContrasenia"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+
+              <!-- Ojo tachado -->
+              <svg
+                *ngIf="mostrarContrasenia"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Alerta de Error -->
+        <div *ngIf="mensajeError" class="alert alert-error mb-4 shadow-sm text-sm p-3">
+          <span>{{ mensajeError }}</span>
+        </div>
+
+        <!-- Botón Submit -->
+        <div class="form-control mt-2">
+          <button
+            type="submit"
+            class="btn btn-primary w-full"
+            [disabled]="loginForm.invalid || enviando"
+          >
+            <span *ngIf="enviando" class="loading loading-spinner loading-sm"></span>
+            {{ enviando ? 'Ingresando...' : 'Iniciar Sesión' }}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>

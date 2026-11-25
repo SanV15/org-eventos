@@ -1,0 +1,672 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="mb-2">
+    <app-breadcrumbs />
+  </div>
+
+
+<div class="p-6 max-w-7xl mx-auto">
+  <a
+    routerLink="/eventos"
+    class="btn btn-ghost btn-sm mb-4 text-base-content/60 hover:text-primary"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+    </svg>
+    Volver a Eventos
+  </a>
+
+  <!-- Cabecera -->
+  <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+    <div>
+      <h2 class="text-3xl font-bold text-base-content">
+        {{ planOperativo?.nombreEvento ? planOperativo?.nombreEvento : ('Cronograma del Evento #' + idEvento) }}
+      </h2>
+      <p class="text-base-content/70 text-sm mt-1">
+        Planificación de horarios, logística, proveedores y servicios del evento.
+        <span *ngIf="planOperativo" class="ml-2 font-semibold text-primary">
+          · {{ planOperativo.lugar }}
+          · {{ planOperativo.esEntradaLibre ? 'Entrada libre' : (planOperativo.numeroInvitados + ' invitados') }}
+        </span>
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-outline" (click)="exportarPDF()">
+        Exportar PDF
+      </button>
+      <button class="btn btn-primary" (click)="abrirModalTarea()">
+        + Nuevo Hito
+      </button>
+    </div>
+  </div>
+
+  <!-- Pestañas principales -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div role="tablist" class="tabs tabs-boxed bg-base-200/70 p-1 w-fit">
+      <button
+        role="tab"
+        type="button"
+        class="tab gap-2 font-semibold"
+        [class.tab-active]="pestanaActiva === 'cronograma'"
+        (click)="pestanaActiva = 'cronograma'"
+      >
+        Cronograma ({{ tareas.length }})
+      </button>
+      <button
+        role="tab"
+        type="button"
+        class="tab gap-2 font-semibold"
+        [class.tab-active]="pestanaActiva === 'proveedores'"
+        (click)="pestanaActiva = 'proveedores'"
+      >
+        Proveedores ({{ planOperativo?.proveedores?.length || 0 }})
+      </button>
+      <button
+        role="tab"
+        type="button"
+        class="tab gap-2 font-semibold"
+        [class.tab-active]="pestanaActiva === 'servicios'"
+        (click)="pestanaActiva = 'servicios'"
+      >
+        Servicios Internos ({{ planOperativo?.serviciosInternos?.length || 0 }})
+      </button>
+    </div>
+
+    <!-- Selector Lista vs Kanban en pestaña Cronograma -->
+    <div *ngIf="pestanaActiva === 'cronograma'" class="join">
+      <button
+        type="button"
+        class="btn btn-sm join-item"
+        [class.btn-primary]="vistaCronograma === 'lista'"
+        [class.btn-outline]="vistaCronograma !== 'lista'"
+        (click)="vistaCronograma = 'lista'"
+      >
+        Línea de Tiempo
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm join-item"
+        [class.btn-primary]="vistaCronograma === 'kanban'"
+        [class.btn-outline]="vistaCronograma !== 'kanban'"
+        (click)="vistaCronograma = 'kanban'"
+      >
+        Tablero Kanban
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="cargando || cargandoPlan" class="flex justify-center py-12">
+    <span class="loading loading-spinner text-primary loading-lg"></span>
+  </div>
+
+  <!-- PESTAÑA 1: CRONOGRAMA (LÍNEA DE TIEMPO O KANBAN) -->
+  <ng-container *ngIf="!cargando && !cargandoPlan && pestanaActiva === 'cronograma'">
+    <!-- Filtro por día multi-día -->
+    <div *ngIf="diasEvento.length > 1" class="flex flex-wrap gap-2 mb-4">
+      <button
+        type="button"
+        class="btn btn-xs"
+        [class.btn-primary]="diaFiltro === 'todos'"
+        [class.btn-outline]="diaFiltro !== 'todos'"
+        (click)="diaFiltro = 'todos'"
+      >
+        Todos los días
+      </button>
+      <button
+        *ngFor="let d of diasEvento"
+        type="button"
+        class="btn btn-xs"
+        [class.btn-primary]="diaFiltro === d.clave"
+        [class.btn-outline]="diaFiltro !== d.clave"
+        (click)="diaFiltro = d.clave"
+      >
+        {{ d.etiqueta }}
+      </button>
+    </div>
+
+    <!-- SUBVISTA A: LÍNEA DE TIEMPO -->
+    <ng-container *ngIf="vistaCronograma === 'lista'">
+      <div *ngIf="entradasRunOfShow.length > 0" class="space-y-4">
+        <ng-container *ngFor="let entrada of entradasRunOfShow">
+          <!-- Tarjeta de Tarea / Hito -->
+          <div
+            *ngIf="entrada.tipo === 'tarea' && entrada.tarea as t"
+            class="card bg-base-100 shadow-md border-l-4 transition-all duration-300"
+            [ngClass]="{
+              'border-success': t.estado === 'Completada',
+              'border-warning': t.estado === 'En proceso',
+              'border-error': t.estado === 'Cancelada',
+              'border-primary': t.estado === 'Pendiente',
+              'opacity-75': t.estado === 'Cancelada'
+            }"
+          >
+            <div class="card-body p-5 flex flex-col md:flex-row gap-4 items-start md:items-center">
+              <div class="md:w-48 flex-shrink-0 text-center md:text-left border-b md:border-b-0 md:border-r border-base-200 pb-3 md:pb-0 md:pr-4">
+                <div class="text-2xl font-bold text-primary">
+                  {{ t.fechaLimite | date: "HH:mm" }}
+                </div>
+                <div class="text-sm text-base-content/60 font-semibold">
+                  {{ t.fechaLimite | date: "MMM d, y" }}
+                </div>
+              </div>
+
+              <div class="flex-grow w-full">
+                <h3 class="text-xl font-bold mb-1" [ngClass]="{ 'line-through text-gray-500': t.estado === 'Cancelada' }">
+                  {{ t.nombre }}
+                </h3>
+                <p class="text-base-content/80 text-sm whitespace-pre-line">
+                  {{ t.descripcion || "Sin detalles logísticos." }}
+                </p>
+
+                <!-- Incidencias -->
+                <div
+                  *ngIf="t.incidencias && t.incidencias.length > 0"
+                  class="mt-3 p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg flex flex-col gap-2 text-sm"
+                >
+                  <div class="font-bold">Historial de Reportes ({{ t.incidencias.length }}):</div>
+                  <div *ngFor="let inc of t.incidencias" class="pl-2 border-l-2 border-amber-400">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="font-medium">{{ inc.observacion }}</p>
+                      <span *ngIf="inc.fechaHora" class="text-xs text-amber-700/80">
+                        {{ inc.fechaHora | date: 'shortTime' }}
+                      </span>
+                    </div>
+                    <div *ngIf="inc.fotoUrl" class="mt-2">
+                      <img
+                        [src]="inc.fotoUrl"
+                        (click)="abrirModalImagen(inc.fotoUrl)"
+                        alt="Evidencia"
+                        class="w-24 h-16 object-cover rounded border cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Estado, Responsable y Acciones Rápidas -->
+                <div class="flex flex-wrap items-center gap-2 mt-3">
+                  <span
+                    class="badge font-semibold"
+                    [ngClass]="{
+                      'badge-success text-white': t.estado === 'Completada',
+                      'badge-warning text-white': t.estado === 'En proceso',
+                      'badge-error text-white': t.estado === 'Cancelada',
+                      'badge-primary text-white': t.estado === 'Pendiente'
+                    }"
+                  >
+                    {{ t.estado }}
+                  </span>
+
+                  <span class="text-sm text-base-content/70" *ngIf="t.personalAsignado">
+                    · {{ t.personalAsignado }}
+                  </span>
+
+                  <div class="ml-auto flex flex-wrap gap-1.5" *ngIf="t.estado !== 'Completada' && t.estado !== 'Cancelada'">
+                    <button
+                      *ngIf="t.estado === 'Pendiente'"
+                      type="button"
+                      class="btn btn-xs btn-outline btn-warning"
+                      (click)="cambiarEstadoTarea(t, 'En proceso')"
+                    >
+                      Iniciar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-success text-white"
+                      (click)="cambiarEstadoTarea(t, 'Completada')"
+                    >
+                      Completar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-outline btn-error"
+                      (click)="cambiarEstadoTarea(t, 'Cancelada')"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-ghost border border-base-300"
+                      (click)="abrirModalIncidencia(t)"
+                    >
+                      + Incidencia
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex-shrink-0 flex flex-row md:flex-col gap-2 self-end md:self-center">
+                <button
+                  class="btn btn-sm btn-ghost btn-circle"
+                  [disabled]="t.estado === 'Completada' || t.estado === 'Cancelada'"
+                  (click)="abrirModalEditar(t)"
+                  title="Editar Hito"
+                >
+                  ✎
+                </button>
+                <button
+                  class="btn btn-sm btn-ghost btn-circle"
+                  [disabled]="t.estado === 'Completada'"
+                  (click)="eliminarTarea(t.idTarea)"
+                  title="Eliminar Hito"
+                >
+                  🗑
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tarjeta de Horario Pactado de Proveedor -->
+          <div
+            *ngIf="entrada.tipo === 'proveedor' && entrada.proveedor as prov"
+            class="card bg-base-100 shadow-md border-l-4"
+            [ngClass]="{
+              'border-warning': esProveedorRetrasado(prov),
+              'border-success': !esProveedorRetrasado(prov) && (prov.estadoOperativo === 'En sitio' || prov.estadoOperativo === 'Completado'),
+              'border-info': !esProveedorRetrasado(prov) && prov.estadoOperativo !== 'En sitio' && prov.estadoOperativo !== 'Completado'
+            }"
+          >
+            <div class="card-body p-5 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div class="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                <div class="md:w-48 flex-shrink-0 border-b md:border-b-0 md:border-r border-base-200 pb-3 md:pb-0 md:pr-4">
+                  <div class="text-xs font-bold uppercase text-info">Hora Pactada</div>
+                  <div class="text-2xl font-bold text-base-content">
+                    {{ prov.horaPactada | date: "HH:mm" }}
+                  </div>
+                  <div class="text-sm text-base-content/60 font-semibold">
+                    {{ prov.horaPactada | date: "MMM d, y" }}
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="badge badge-info badge-outline font-semibold">Proveedor</span>
+                    <span class="badge font-semibold">{{ prov.estadoOperativo }}</span>
+                  </div>
+                  <h3 class="text-lg font-bold mt-1">Llegada / Montaje: {{ prov.nombreServicio }}</h3>
+                  <p class="text-sm text-base-content/70">Proveedor: <strong>{{ prov.nombreProveedor }}</strong></p>
+                </div>
+              </div>
+
+              <button class="btn btn-sm btn-outline" (click)="abrirModalOperacionProveedor(prov)">
+                Gestionar tiempos
+              </button>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <div
+        *ngIf="entradasRunOfShow.length === 0"
+        class="text-center py-16 bg-base-100 rounded-box shadow border-2 border-dashed border-base-300"
+      >
+        <h3 class="text-xl font-bold text-base-content mb-2">Cronograma Vacío</h3>
+        <p class="text-base-content/60 max-w-md mx-auto mb-6">
+          No hay hitos logísticos ni horarios pactados para este filtro.
+        </p>
+        <div class="flex justify-center gap-3">
+          <button class="btn btn-outline" (click)="generarPlantillaBase()">Autogenerar Plantilla</button>
+          <button class="btn btn-primary" (click)="abrirModalTarea()">Agregar Primer Hito</button>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- SUBVISTA B: TABLERO KANBAN -->
+    <div *ngIf="vistaCronograma === 'kanban'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+      <div *ngFor="let colEstado of estadosKanban" class="bg-base-200/70 rounded-xl p-3 border border-base-300">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <h4 class="font-bold text-sm uppercase tracking-wide">{{ colEstado }}</h4>
+          <span class="badge badge-sm font-bold">{{ tareasPorEstado(colEstado).length }}</span>
+        </div>
+
+        <div class="space-y-3 min-h-[120px]">
+          <div *ngFor="let t of tareasPorEstado(colEstado)" class="card bg-base-100 shadow-sm border border-base-200">
+            <div class="card-body p-3.5">
+              <div class="flex items-center justify-between text-xs text-base-content/60 font-semibold mb-1">
+                <span>{{ t.fechaLimite | date: "MMM d, HH:mm" }}</span>
+                <span *ngIf="t.incidencias?.length" class="badge badge-warning badge-xs">
+                  {{ t.incidencias.length }} rep.
+                </span>
+              </div>
+
+              <h5 class="font-bold text-sm" [ngClass]="{ 'line-through text-gray-400': t.estado === 'Cancelada' }">
+                {{ t.nombre }}
+              </h5>
+              <p class="text-xs text-base-content/70 line-clamp-2 mt-1">
+                {{ t.descripcion || 'Sin detalles.' }}
+              </p>
+              <p class="text-xs text-base-content/60 mt-2" *ngIf="t.personalAsignado">
+                Responsable: <strong>{{ t.personalAsignado }}</strong>
+              </p>
+
+              <div class="flex flex-wrap gap-1 mt-3 pt-2 border-t border-base-200">
+                <button
+                  *ngIf="t.estado !== 'En proceso' && t.estado !== 'Completada' && t.estado !== 'Cancelada'"
+                  type="button"
+                  class="btn btn-2xs btn-ghost text-warning"
+                  (click)="cambiarEstadoTarea(t, 'En proceso')"
+                >
+                  En proceso
+                </button>
+                <button
+                  *ngIf="t.estado !== 'Completada' && t.estado !== 'Cancelada'"
+                  type="button"
+                  class="btn btn-2xs btn-ghost text-success"
+                  (click)="cambiarEstadoTarea(t, 'Completada')"
+                >
+                  Completar
+                </button>
+                <button
+                  *ngIf="t.estado !== 'Cancelada' && t.estado !== 'Completada'"
+                  type="button"
+                  class="btn btn-2xs btn-ghost text-error"
+                  (click)="cambiarEstadoTarea(t, 'Cancelada')"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-2xs btn-ghost"
+                  (click)="abrirModalIncidencia(t)"
+                >
+                  Incidencia
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-2xs btn-ghost ml-auto"
+                  [disabled]="t.estado === 'Completada' || t.estado === 'Cancelada'"
+                  (click)="abrirModalEditar(t)"
+                >
+                  Editar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- PESTAÑA 2: PROVEEDORES (PACTADA, LLEGADA, SALIDA, ESTADO Y USUARIO CHECK-IN) -->
+  <div *ngIf="!cargandoPlan && pestanaActiva === 'proveedores'" class="space-y-4">
+    <div *ngIf="!planOperativo?.proveedores?.length" class="text-center py-12 bg-base-100 rounded-box shadow">
+      <p class="text-base-content/60">No hay proveedores asignados a este evento.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" *ngIf="planOperativo?.proveedores?.length">
+      <div *ngFor="let prov of planOperativo?.proveedores" class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body p-5">
+          <div class="flex justify-between items-start gap-2">
+            <div>
+              <h3 class="font-bold text-lg">{{ prov.nombreServicio }}</h3>
+              <p class="text-sm text-base-content/70">{{ prov.nombreProveedor }}</p>
+              <p *ngIf="prov.telefonoProveedor" class="text-xs text-base-content/60 mt-0.5">
+                Tel: {{ prov.telefonoProveedor }}
+              </p>
+            </div>
+            <span
+              class="badge font-semibold"
+              [ngClass]="{
+                'badge-warning text-white': esProveedorRetrasado(prov),
+                'badge-success text-white': !esProveedorRetrasado(prov) && (prov.estadoOperativo === 'En sitio' || prov.estadoOperativo === 'Completado'),
+                'badge-primary text-white': !esProveedorRetrasado(prov) && prov.estadoOperativo !== 'En sitio' && prov.estadoOperativo !== 'Completado'
+              }"
+            >
+              {{ prov.estadoOperativo }}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 bg-base-200/60 p-3 rounded-lg mt-4 text-center text-xs">
+            <div>
+              <div class="text-base-content/60 font-semibold">Pactada</div>
+              <div class="font-bold text-sm mt-0.5">
+                {{ prov.horaPactada ? (prov.horaPactada | date: "HH:mm") : '--:--' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-base-content/60 font-semibold">Llegada</div>
+              <div class="font-bold text-sm mt-0.5">
+                {{ prov.horaLlegada ? (prov.horaLlegada | date: "HH:mm") : '--:--' }}
+              </div>
+            </div>
+            <div>
+              <div class="text-base-content/60 font-semibold">Salida</div>
+              <div class="font-bold text-sm mt-0.5">
+                {{ prov.horaSalida ? (prov.horaSalida | date: "HH:mm") : '--:--' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 text-xs text-base-content/70 space-y-1">
+            <p *ngIf="prov.idUsuarioCheckin">
+              <strong>Check-in por:</strong> {{ nombreUsuarioCheckin(prov.idUsuarioCheckin) }}
+            </p>
+            <p *ngIf="prov.observaciones">
+              <strong>Notas:</strong> {{ prov.observaciones }}
+            </p>
+          </div>
+
+          <div class="card-actions justify-end mt-4">
+            <button class="btn btn-sm btn-primary" (click)="abrirModalOperacionProveedor(prov)">
+              Configurar Tiempos y Check-in
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 3: SERVICIOS INTERNOS -->
+  <div *ngIf="!cargandoPlan && pestanaActiva === 'servicios'" class="space-y-4">
+    <div *ngIf="!planOperativo?.serviciosInternos?.length" class="text-center py-12 bg-base-100 rounded-box shadow">
+      <p class="text-base-content/60">No hay servicios internos registrados en la cotización de este evento.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" *ngIf="planOperativo?.serviciosInternos?.length">
+      <div *ngFor="let srv of planOperativo?.serviciosInternos" class="card bg-base-100 shadow border border-base-200">
+        <div class="card-body p-5">
+          <div class="flex justify-between items-start gap-2">
+            <h3 class="font-bold text-lg">{{ srv.nombre }}</h3>
+            <span class="badge badge-primary badge-outline font-semibold">Cant: {{ srv.cantidad }}</span>
+          </div>
+          <p class="text-sm text-base-content/70 mt-1">
+            {{ srv.descripcion || 'Servicio propio de la organización.' }}
+          </p>
+          <div class="flex justify-between items-center mt-4 pt-3 border-t border-base-200">
+            <span class="text-sm font-semibold text-base-content/80">
+              Subtotal: ${{ srv.subtotal | number: "1.2-2" }}
+            </span>
+            <button class="btn btn-sm btn-outline btn-primary" (click)="programarHitoDesdeServicio(srv)">
+              Programar hito
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE EDICIÓN/CREACIÓN DE HITO -->
+<dialog id="modal_nueva_tarea" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">
+      {{ modoEdicion ? "Editar Hito Logístico" : "Planificar Hito Logístico" }}
+    </h3>
+
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text font-semibold">Actividad Principal</span></label>
+      <input
+        type="text"
+        [(ngModel)]="nuevaTarea.nombre"
+        class="input input-bordered w-full"
+        placeholder="Ej. Llegada de Proveedores"
+      />
+    </div>
+
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text font-semibold">Logística y Detalles</span></label>
+      <textarea
+        [(ngModel)]="nuevaTarea.descripcion"
+        class="textarea textarea-bordered h-24"
+        placeholder="Especifica qué proveedores llegan, instrucciones para el equipo, etc..."
+      ></textarea>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Responsable (Coordinador)</span></label>
+        <select [(ngModel)]="nuevaTarea.idUsuario" class="select select-bordered w-full">
+          <option [ngValue]="null">Sin asignar</option>
+          <option *ngFor="let p of personal" [ngValue]="p.idUsuario">
+            {{ p.nombre }} {{ p.apellidoPaterno }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Fecha y Hora</span></label>
+        <input
+          type="datetime-local"
+          [(ngModel)]="nuevaTarea.fechaLimite"
+          [min]="minFecha"
+          [max]="maxFecha"
+          class="input input-bordered w-full"
+        />
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn mr-2" [disabled]="procesando">Cancelar</button>
+        <button
+          class="btn btn-primary"
+          (click)="guardarTarea()"
+          [disabled]="procesando || !nuevaTarea.nombre || !nuevaTarea.fechaLimite"
+        >
+          <span *ngIf="procesando" class="loading loading-spinner loading-xs"></span>
+          {{ modoEdicion ? "Actualizar Hito" : "Guardar Hito" }}
+        </button>
+      </form>
+    </div>
+  </div>
+</dialog>
+
+<!-- MODAL DE OPERACIÓN DE PROVEEDOR (PACTADA, LLEGADA, SALIDA, ESTADO, USUARIO CHECK-IN) -->
+<dialog id="modal_operacion_proveedor" class="modal">
+  <div class="modal-box max-w-lg">
+    <h3 class="font-bold text-lg mb-1">Control Operativo de Proveedor</h3>
+    <p class="text-sm text-base-content/70 mb-4" *ngIf="proveedorEditando">
+      {{ proveedorEditando.nombreServicio }} — {{ proveedorEditando.nombreProveedor }}
+    </p>
+
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text font-semibold">Hora Pactada</span></label>
+      <input type="datetime-local" [(ngModel)]="formProveedor.horaPactada" class="input input-bordered w-full" />
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Hora de Llegada</span>
+          <button type="button" class="label-text-alt link link-primary" (click)="marcarLlegadaAhora()">Ahora</button>
+        </label>
+        <input type="datetime-local" [(ngModel)]="formProveedor.horaLlegada" class="input input-bordered w-full" />
+      </div>
+
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Hora de Salida</span>
+          <button type="button" class="label-text-alt link link-primary" (click)="marcarSalidaAhora()">Ahora</button>
+        </label>
+        <input type="datetime-local" [(ngModel)]="formProveedor.horaSalida" class="input input-bordered w-full" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Estado Operativo</span></label>
+        <select [(ngModel)]="formProveedor.estadoOperativo" class="select select-bordered w-full">
+          <option *ngFor="let est of estadosProveedor" [value]="est">{{ est }}</option>
+        </select>
+      </div>
+
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Usuario Check-in</span></label>
+        <select [(ngModel)]="formProveedor.idUsuarioCheckin" class="select select-bordered w-full">
+          <option [ngValue]="null">Sin asignar</option>
+          <option *ngFor="let p of personal" [ngValue]="p.idUsuario">
+            {{ p.nombre }} {{ p.apellidoPaterno }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold">Observaciones</span></label>
+      <textarea
+        [(ngModel)]="formProveedor.observaciones"
+        class="textarea textarea-bordered h-20"
+        placeholder="Notas de llegada, montaje, entrega o retrasos..."
+      ></textarea>
+    </div>
+
+    <div class="modal-action">
+      <button type="button" class="btn" (click)="cerrarModalOperacionProveedor()" [disabled]="guardandoProveedor">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-primary" (click)="guardarOperacionProveedor()" [disabled]="guardandoProveedor">
+        <span *ngIf="guardandoProveedor" class="loading loading-spinner loading-xs"></span>
+        Guardar Cambios
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- MODAL DE INCIDENCIA EN TAREA -->
+<dialog id="modal_incidencia_tarea" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-1">Reportar Incidencia</h3>
+    <p class="text-sm text-base-content/70 mb-4" *ngIf="tareaIncidencia">
+      Hito: <strong>{{ tareaIncidencia.nombre }}</strong>
+    </p>
+
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text font-semibold">Descripción del reporte</span></label>
+      <textarea
+        [(ngModel)]="observacionIncidencia"
+        class="textarea textarea-bordered h-24"
+        placeholder="Describe qué ocurrió, retraso, falta de material o novedad..."
+      ></textarea>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold">Evidencia fotográfica (opcional)</span></label>
+      <input type="file" accept="image/*" (change)="onArchivoIncidencia($event)" class="file-input file-input-bordered file-input-sm w-full" />
+    </div>
+
+    <div class="modal-action">
+      <button type="button" class="btn" (click)="cerrarModalIncidencia()" [disabled]="enviandoIncidencia">Cancelar</button>
+      <button
+        type="button"
+        class="btn btn-warning text-white"
+        (click)="guardarIncidencia()"
+        [disabled]="enviandoIncidencia || !observacionIncidencia.trim()"
+      >
+        <span *ngIf="enviandoIncidencia" class="loading loading-spinner loading-xs"></span>
+        Registrar Incidencia
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="modal_ver_imagen" class="modal">
+  <div class="modal-box max-w-3xl p-2 bg-base-100 relative">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 z-10 bg-base-200" (click)="cerrarModalImagen()">✕</button>
+    </form>
+    <div class="flex justify-center items-center overflow-hidden rounded-lg bg-black/5 p-2">
+      <img *ngIf="imagenModalUrl" [src]="imagenModalUrl" alt="Evidencia Ampliada" class="max-h-[80vh] object-contain rounded" />
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button (click)="cerrarModalImagen()">cerrar</button>
+  </form>
+</dialog>

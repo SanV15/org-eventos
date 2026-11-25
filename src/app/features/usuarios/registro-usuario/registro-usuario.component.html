@@ -1,0 +1,194 @@
+<div
+  class="min-h-screen bg-base-200 text-base-content p-6 lg:p-8"
+  [attr.data-theme]="temaService.temaActual()"
+>
+  <div class="max-w-3xl mx-auto">
+    <div class="mb-2">
+      <app-breadcrumbs />
+    </div>
+
+    <div class="mb-6 flex items-center gap-3">
+      <a
+        routerLink="/usuarios"
+        class="btn btn-circle btn-ghost btn-sm"
+        title="Regresar al Listado de Usuarios"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </a>
+      <div>
+        <h2 class="text-2xl lg:text-3xl font-bold tracking-tight m-0">Agregar Usuario</h2>
+        <p class="text-sm opacity-70">Alta de cuentas de acceso y asignación de rol (exclusivo para Administrador).</p>
+      </div>
+    </div>
+
+    <div *ngIf="errorMensaje" class="alert alert-error shadow-sm mb-6">
+      <span>{{ errorMensaje }}</span>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 rounded-2xl shadow-sm">
+      <div class="card-body p-6 lg:p-8">
+        <form #usuarioForm="ngForm" (ngSubmit)="registrarUsuario()" novalidate>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text font-semibold">Nombre <span class="text-error">*</span></span>
+              </label>
+              <input
+                type="text"
+                name="nombre"
+                [(ngModel)]="modelo.nombre"
+                #nombreCtrl="ngModel"
+                required
+                minlength="2"
+                placeholder="Ej. Ana"
+                class="input input-bordered w-full"
+              />
+              <label *ngIf="nombreCtrl.invalid && (nombreCtrl.dirty || nombreCtrl.touched)" class="label">
+                <span class="label-text-alt text-error">El nombre es obligatorio.</span>
+              </label>
+            </div>
+
+            <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text font-semibold">Apellido Paterno <span class="text-error">*</span></span>
+              </label>
+              <input
+                type="text"
+                name="apellidoPaterno"
+                [(ngModel)]="modelo.apellidoPaterno"
+                #apPatCtrl="ngModel"
+                required
+                minlength="2"
+                placeholder="Ej. Pérez"
+                class="input input-bordered w-full"
+              />
+              <label *ngIf="apPatCtrl.invalid && (apPatCtrl.dirty || apPatCtrl.touched)" class="label">
+                <span class="label-text-alt text-error">El apellido paterno es obligatorio.</span>
+              </label>
+            </div>
+
+            <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text font-semibold">Apellido Materno</span>
+              </label>
+              <input
+                type="text"
+                name="apellidoMaterno"
+                [(ngModel)]="modelo.apellidoMaterno"
+                placeholder="Opcional"
+                class="input input-bordered w-full"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text font-semibold">Correo Electrónico <span class="text-error">*</span></span>
+              </label>
+              <input
+                type="email"
+                name="correo"
+                [(ngModel)]="modelo.correo"
+                #correoCtrl="ngModel"
+                required
+                email
+                placeholder="usuario@empresa.com"
+                class="input input-bordered w-full"
+              />
+              <label *ngIf="correoCtrl.invalid && (correoCtrl.dirty || correoCtrl.touched)" class="label">
+                <span class="label-text-alt text-error">Ingresa un correo válido.</span>
+              </label>
+            </div>
+
+            <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text font-semibold">Contraseña <span class="text-error">*</span></span>
+              </label>
+              <div class="join w-full">
+                <input
+                  [type]="mostrarPassword ? 'text' : 'password'"
+                  name="contrasenia"
+                  [(ngModel)]="modelo.contrasenia"
+                  #passCtrl="ngModel"
+                  required
+                  minlength="6"
+                  placeholder="Mínimo 6 caracteres"
+                  class="input input-bordered join-item w-full"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline join-item"
+                  (click)="mostrarPassword = !mostrarPassword"
+                  title="Mostrar u ocultar contraseña"
+                >
+                  {{ mostrarPassword ? 'Ocultar' : 'Ver' }}
+                </button>
+              </div>
+              <label *ngIf="passCtrl.invalid && (passCtrl.dirty || passCtrl.touched)" class="label">
+                <span class="label-text-alt text-error">Mínimo 6 caracteres.</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="form-control w-full">
+              <label class="label">
+                <span class="label-text font-semibold">Rol del Usuario <span class="text-error">*</span></span>
+              </label>
+              <select
+                name="idRol"
+                [(ngModel)]="modelo.idRol"
+                #rolCtrl="ngModel"
+                required
+                [disabled]="cargandoRoles"
+                class="select select-bordered w-full"
+              >
+                <option [ngValue]="0" disabled>
+                  {{ cargandoRoles ? 'Cargando roles...' : 'Selecciona un rol' }}
+                </option>
+                <option *ngFor="let r of roles" [ngValue]="r.idRol">
+                  {{ r.nombre }}
+                </option>
+              </select>
+              <label *ngIf="rolCtrl.invalid && (rolCtrl.dirty || rolCtrl.touched)" class="label">
+                <span class="label-text-alt text-error">Selecciona un rol.</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap justify-end gap-3 pt-4 border-t border-base-300">
+            <button
+              type="button"
+              class="btn btn-ghost"
+              (click)="limpiarFormulario()"
+              [disabled]="guardando"
+            >
+              Limpiar
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline"
+              (click)="volver()"
+              [disabled]="guardando"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="usuarioForm.invalid || guardando || modelo.idRol <= 0"
+            >
+              <span *ngIf="guardando" class="loading loading-spinner loading-sm"></span>
+              Guardar Usuario
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

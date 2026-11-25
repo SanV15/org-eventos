@@ -1,0 +1,185 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="mb-2">
+    <app-breadcrumbs />
+  </div>
+
+
+<div class="p-6">
+  <!-- Encabezado con Título y BOTÓN DE ACCESO -->
+  <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+    <div class="flex items-center gap-3">
+      <a routerLink="/dashboard" class="btn btn-circle btn-ghost btn-sm" title="Regresar al Dashboard">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </a>
+      <h2 class="text-3xl font-bold text-base-content m-0">Directorio de Proveedores</h2>
+    </div>
+
+    <a routerLink="/proveedores/nuevo" class="btn btn-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 mr-2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      Nuevo Proveedor
+    </a>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body p-0 overflow-x-auto">
+      <!-- Sección del Buscador -->
+      <div class="p-4 border-b border-base-200 bg-base-100">
+        <div class="form-control w-full max-w-md">
+          <div class="relative">
+            <input type="text" placeholder="Buscar por nombre, correo o categoría..."
+                   class="input input-bordered w-full pl-10"
+                   [(ngModel)]="terminoBusqueda"
+                   (input)="filtrarProveedores()" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute top-3 left-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicador de carga -->
+      <div *ngIf="cargando" class="p-10 text-center">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+
+      <!-- Tabla de Proveedores -->
+      <table *ngIf="!cargando" class="table table-zebra w-full">
+        <thead class="bg-base-200 text-base-content text-sm">
+          <tr>
+            <th>Proveedor</th>
+            <th>Categorías</th>
+            <th>Contacto</th>
+            <th>Disponibilidad Hoy</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="proveedores.length === 0">
+            <td colspan="6" class="text-center py-6 text-gray-500">No hay proveedores registrados. ¡Agrega el primero!</td>
+          </tr>
+
+          <tr *ngIf="proveedores.length > 0 && proveedoresFiltrados.length === 0">
+            <td colspan="6" class="text-center py-6 text-gray-500">
+              No se encontraron proveedores que coincidan con tu búsqueda.
+            </td>
+          </tr>
+
+          <tr *ngFor="let prov of proveedoresFiltrados">
+            <!-- Avatar + Nombre -->
+            <td>
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 rounded-full overflow-hidden bg-primary/10 text-primary flex items-center justify-center font-bold text-sm ring-1 ring-primary/20 shrink-0"
+                  [class.cursor-pointer]="prov.fotoProveedorUrl && !prov._errorImg"
+                  [title]="prov.fotoProveedorUrl && !prov._errorImg ? 'Ver imagen' : ''"
+                  (click)="abrirVistaPrevia(prov)">
+                  <img
+                    *ngIf="prov.fotoProveedorUrl && !prov._errorImg"
+                    [src]="prov.fotoProveedorUrl"
+                    [alt]="prov.nombreCompleto"
+                    class="w-full h-full object-cover"
+                    (error)="prov._errorImg = true" />
+                  <span *ngIf="!prov.fotoProveedorUrl || prov._errorImg">
+                    {{ obtenerInicial(prov.nombreCompleto) }}
+                  </span>
+                </div>
+
+                <a [routerLink]="['/proveedores', prov.idProveedor, 'perfil']"
+                   class="font-bold text-primary hover:underline cursor-pointer">
+                  {{ prov.nombreCompleto }}
+                </a>
+              </div>
+            </td>
+
+            <!-- Categorías -->
+            <td>
+              <span class="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
+                {{ prov.categorias || 'Sin categoría' }}
+              </span>
+            </td>
+
+            <!-- Contacto -->
+            <td>
+              <div class="text-sm">{{ prov.correo || 'Sin correo' }}</div>
+              <div class="text-xs opacity-70">{{ prov.telefono || 'Sin teléfono' }}</div>
+            </td>
+
+            <!-- Disponibilidad -->
+            <td>
+              <span class="badge badge-sm font-semibold"
+                    [ngClass]="prov.estaOcupadoHoy ? 'badge-error text-white' : 'badge-success text-white'">
+                {{ prov.estaOcupadoHoy ? 'Ocupado Hoy' : 'Disponible' }}
+              </span>
+            </td>
+
+            <!-- Estado Activo/Inactivo -->
+            <td>
+              <div class="badge" [ngClass]="prov.activo ? 'badge-success text-white' : 'badge-error text-white'">
+                {{ prov.activo ? 'Activo' : 'Inactivo' }}
+              </div>
+            </td>
+
+            <!-- Acciones -->
+            <td>
+              <div class="flex items-center gap-3">
+                <div class="form-control">
+                  <label class="label cursor-pointer p-0">
+                    <input type="checkbox" class="toggle toggle-primary toggle-sm"
+                           [checked]="prov.activo"
+                           (click)="$event.preventDefault(); abrirModal(prov)"
+                           title="Cambiar estado" />
+                  </label>
+                </div>
+
+                <a [routerLink]="['/proveedores/editar', prov.idProveedor]"
+                   class="btn btn-ghost btn-sm btn-square text-primary hover:bg-primary/20"
+                   title="Editar datos">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                </a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Vista Previa de Foto -->
+<div class="modal" [class.modal-open]="imagenModalUrl !== null">
+  <div class="modal-box max-w-2xl p-3 bg-base-100">
+    <div class="flex justify-between items-center mb-2 px-2">
+      <h3 class="font-bold text-base">{{ imagenModalTitulo }}</h3>
+      <button class="btn btn-sm btn-circle btn-ghost" (click)="cerrarVistaPrevia()">✕</button>
+    </div>
+    <img *ngIf="imagenModalUrl" [src]="imagenModalUrl" [alt]="imagenModalTitulo" class="w-full max-h-[75vh] object-contain rounded-lg" />
+  </div>
+  <form method="dialog" class="modal-backdrop" (click)="cerrarVistaPrevia()"><button>cerrar</button></form>
+</div>
+
+<!-- Modal de Confirmación para Cambio de Estado -->
+<div class="modal" [class.modal-open]="modalAbierto">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Confirmar acción</h3>
+    <p class="py-4" *ngIf="proveedorSeleccionado">
+      ¿Estás seguro de que deseas <strong>{{ proveedorSeleccionado.activo ? 'desactivar' : 'activar' }}</strong>
+      al proveedor <span class="text-primary font-semibold">{{ proveedorSeleccionado.nombreCompleto }}</span>?
+    </p>
+    <div class="modal-action">
+      <button class="btn btn-ghost" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn"
+              [ngClass]="proveedorSeleccionado?.activo ? 'btn-error text-white' : 'btn-success text-white'"
+              (click)="confirmarCambioEstado()">
+        Sí, {{ proveedorSeleccionado?.activo ? 'desactivar' : 'activar' }}
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" (click)="cerrarModal()"><button>cerrar</button></form>
+</div>

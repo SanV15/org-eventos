@@ -1,0 +1,182 @@
+<div
+  class="min-h-screen bg-base-200 text-base-content p-6 lg:p-8"
+  [attr.data-theme]="temaService.temaActual()"
+>
+  <div class="max-w-6xl mx-auto">
+    <div class="mb-2">
+      <app-breadcrumbs />
+    </div>
+
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <a
+          routerLink="/dashboard"
+          class="btn btn-circle btn-ghost btn-sm"
+          title="Regresar al Panel de Control"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </a>
+        <div>
+          <h2 class="text-2xl lg:text-3xl font-bold tracking-tight m-0">Gestión de Usuarios</h2>
+          <p class="text-sm opacity-70">Consulta de roles y control de acceso al sistema.</p>
+        </div>
+      </div>
+
+      <a routerLink="/usuarios/nuevo" class="btn btn-primary">
+        + Agregar Usuario
+      </a>
+    </div>
+
+    <div *ngIf="errorMensaje" class="alert alert-error shadow-sm mb-6">
+      <span>{{ errorMensaje }}</span>
+    </div>
+
+    <div class="bg-base-100 rounded-2xl border border-base-300 shadow-sm overflow-x-auto">
+      <div *ngIf="cargando" class="flex justify-center py-12">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+
+      <table *ngIf="!cargando" class="table w-full">
+        <thead class="bg-base-200/70">
+          <tr>
+            <th>Usuario</th>
+            <th>Correo</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th class="text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of usuarios" class="hover:bg-base-200/40">
+            <td class="font-semibold">{{ nombreCompleto(u) }}</td>
+            <td class="text-sm opacity-80">{{ u.correo }}</td>
+            <td>
+              <span class="badge badge-outline badge-primary font-semibold">
+                {{ u.nombreRol }}
+              </span>
+            </td>
+            <td>
+              <span
+                class="badge font-semibold"
+                [ngClass]="u.activo ? 'badge-success badge-outline' : 'badge-error badge-outline'"
+              >
+                {{ u.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td class="text-right whitespace-nowrap">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline btn-primary mr-2"
+                (click)="abrirModalContrasenia(u)"
+              >
+                Contraseña
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                [ngClass]="u.activo ? 'btn-outline btn-error' : 'btn-outline btn-success'"
+                (click)="abrirModalEstado(u)"
+              >
+                {{ u.activo ? 'Desactivar' : 'Activar' }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="usuarios.length === 0">
+            <td colspan="5" class="text-center py-8 opacity-60">
+              No hay usuarios registrados.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Activar / Desactivar Usuario -->
+<dialog id="modal_estado_usuario" class="modal">
+  <div class="modal-box max-w-md" *ngIf="usuarioSeleccionado">
+    <h3 class="font-bold text-lg mb-2">
+      {{ usuarioSeleccionado.activo ? 'Desactivar Usuario' : 'Activar Usuario' }}
+    </h3>
+    <p class="text-sm opacity-80 mb-6">
+      ¿Seguro que deseas
+      <strong>{{ usuarioSeleccionado.activo ? 'desactivar' : 'activar' }}</strong>
+      a <strong>{{ nombreCompleto(usuarioSeleccionado) }}</strong> ({{ usuarioSeleccionado.nombreRol }})?
+      <span *ngIf="usuarioSeleccionado.activo" class="block mt-2 text-warning text-xs">
+        No podrá iniciar sesión mientras esté inactivo.
+      </span>
+    </p>
+    <div class="modal-action">
+      <button type="button" class="btn btn-ghost" (click)="cerrarModalEstado()" [disabled]="cambiandoEstado">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="btn"
+        [ngClass]="usuarioSeleccionado.activo ? 'btn-error text-error-content' : 'btn-success text-success-content'"
+        (click)="confirmarCambioEstado()"
+        [disabled]="cambiandoEstado"
+      >
+        <span *ngIf="cambiandoEstado" class="loading loading-spinner loading-xs"></span>
+        Confirmar
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Modal Cambiar Contraseña -->
+<dialog id="modal_contrasenia_usuario" class="modal">
+  <div class="modal-box max-w-md" *ngIf="usuarioContrasenia">
+    <h3 class="font-bold text-lg mb-1">Cambiar Contraseña</h3>
+    <p class="text-sm opacity-75 mb-4">
+      Usuario: <strong>{{ nombreCompleto(usuarioContrasenia) }}</strong> ({{ usuarioContrasenia.nombreRol }})
+    </p>
+
+    <div class="form-control w-full mb-6">
+      <label class="label">
+        <span class="label-text font-semibold">Nueva contraseña</span>
+      </label>
+      <div class="join w-full">
+        <input
+          [type]="mostrarNuevaContrasenia ? 'text' : 'password'"
+          [(ngModel)]="nuevaContrasenia"
+          name="nuevaContrasenia"
+          placeholder="Mínimo 6 caracteres"
+          class="input input-bordered join-item w-full"
+        />
+        <button
+          type="button"
+          class="btn btn-outline join-item"
+          (click)="mostrarNuevaContrasenia = !mostrarNuevaContrasenia"
+        >
+          {{ mostrarNuevaContrasenia ? 'Ocultar' : 'Ver' }}
+        </button>
+      </div>
+      <label class="label">
+        <span class="label-text-alt opacity-70">Debe contener al menos 6 caracteres.</span>
+      </label>
+    </div>
+
+    <div class="modal-action">
+      <button
+        type="button"
+        class="btn btn-ghost"
+        (click)="cerrarModalContrasenia()"
+        [disabled]="cambiandoContrasenia"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="confirmarCambioContrasenia()"
+        [disabled]="cambiandoContrasenia || (nuevaContrasenia.trim().length < 6)"
+      >
+        <span *ngIf="cambiandoContrasenia" class="loading loading-spinner loading-xs"></span>
+        Guardar Contraseña
+      </button>
+    </div>
+  </div>
+</dialog>

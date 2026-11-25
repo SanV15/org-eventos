@@ -1,0 +1,159 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <!-- Cabecera -->
+  <div class="flex items-center gap-3 mb-6">
+    <a routerLink="/cotizaciones" class="btn btn-circle btn-ghost btn-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+    </a>
+    <h2 class="text-3xl font-bold text-base-content m-0">Generar Presupuesto</h2>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- COLUMNA IZQUIERDA: Controles y Selectores -->
+    <div class="lg:col-span-1 flex flex-col gap-4">
+
+      <!-- 1. Card Fecha de Referencia -->
+      <div class="card bg-base-100 shadow-xl border-t-4 border-accent">
+        <div class="card-body p-5">
+          <h3 class="font-bold text-lg mb-2">1. Fecha de Referencia</h3>
+          <div class="form-control w-full">
+            <input type="date" class="input input-bordered w-full" [(ngModel)]="fechaReferencia" />
+            <label class="label pt-1 pb-0">
+              <span class="label-text-alt text-gray-500">Solo referencia para revisar disponibilidad; la fecha oficial y los invitados se definen al crear el evento.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Card Cliente -->
+      <div class="card bg-base-100 shadow-xl border-t-4 border-primary">
+        <div class="card-body p-5">
+          <h3 class="font-bold text-lg mb-2">2. Datos del Cliente</h3>
+          <div class="form-control w-full">
+            <select class="select select-bordered w-full" [(ngModel)]="idClienteSeleccionado">
+              <option [value]="0" disabled selected>Seleccione un cliente...</option>
+              <option *ngFor="let c of clientes" [value]="c.idCliente">
+                {{ c.nombreConDetalle }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Card Agregar Servicios -->
+      <div class="card bg-base-100 shadow-xl border-t-4 border-secondary">
+        <div class="card-body p-5">
+          <h3 class="font-bold text-lg mb-4">3. Agregar Conceptos</h3>
+
+          <!-- Servicios Internos -->
+          <div class="form-control w-full mb-4">
+            <label class="label pt-0"><span class="label-text font-semibold text-primary">Servicios de Agencia (Internos)</span></label>
+            <div class="join w-full">
+              <select class="select select-bordered join-item w-full text-sm" [(ngModel)]="servicioInternoSeleccionado">
+                <option [ngValue]="null" disabled selected>Seleccionar...</option>
+                <option *ngFor="let s of serviciosInternosDisponibles" [ngValue]="s">
+                  {{ s.nombre }} (${{ s.precio }})
+                </option>
+              </select>
+              <button class="btn btn-primary join-item" (click)="agregarServicioInterno()">Añadir</button>
+            </div>
+          </div>
+
+          <div class="divider my-1">O</div>
+
+          <!-- Servicios Externos -->
+          <div class="form-control w-full">
+            <label class="label"><span class="label-text font-semibold text-secondary">Servicios de Proveedores (Externos)</span></label>
+            <div class="join w-full">
+              <select class="select select-bordered join-item w-full text-sm" [(ngModel)]="servicioExternoSeleccionado">
+                <option [ngValue]="null" disabled selected>Seleccionar...</option>
+HTML
+<option *ngFor="let sp of serviciosExternos" [ngValue]="sp">
+  {{ sp.nombreServicio }} — {{ sp.nombreProveedor }} (${{ sp.costo }} · {{ sp.unidadCobro || 'Por evento' }})
+</option>
+              </select>
+              <button class="btn btn-secondary join-item" (click)="agregarServicioExterno()">Añadir</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: El Carrito y Total -->
+    <div class="lg:col-span-2">
+      <div class="card bg-base-100 shadow-xl h-full flex flex-col">
+        <div class="card-body p-0 flex-grow">
+          <div class="p-5 border-b border-base-200">
+            <h3 class="font-bold text-lg">4. Resumen de Cotización</h3>
+          </div>
+
+          <div class="overflow-x-auto w-full">
+            <table class="table table-zebra w-full">
+              <thead class="bg-base-200">
+                <tr>
+                  <th>Concepto</th>
+                  <th class="w-24 text-center">Cant.</th>
+                  <th class="w-32 text-right">Costo Unit.</th>
+                  <th class="w-32 text-right">Subtotal</th>
+                  <th class="w-12 text-center"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="carrito.length === 0">
+                  <td colspan="5" class="text-center py-12 text-gray-500">
+                    No has agregado ningún servicio a la cotización.
+                  </td>
+                </tr>
+                <tr *ngFor="let item of carrito; let i = index">
+                  <td>
+                    <div class="font-bold text-sm">{{ item.nombre }}</div>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                      <span class="badge badge-sm" [ngClass]="item.tipo === 'Interno' ? 'badge-primary' : 'badge-secondary'">
+                        {{ item.tipo }}
+                      </span>
+                      <span *ngIf="item.tipo === 'Externo'" class="badge badge-outline badge-xs">
+                        {{ item.unidadCobro || 'Por evento' }}
+                      </span>
+                    </div>
+<p *ngIf="item.tipo === 'Externo' && item.unidadCobro === 'Por unidad'" class="text-[11px] text-info mt-1">
+  Se calcula por cantidad de unidades contratadas (precio × cantidad).
+</p>
+                    <input *ngIf="item.tipo === 'Externo'" type="text" class="input input-xs input-bordered w-full mt-2" placeholder="Observaciones (ej. Sujeto a disponibilidad)" [(ngModel)]="item.observaciones" />
+                  </td>
+                  <td>
+                    <input type="number" class="input input-sm input-bordered w-full text-center" [(ngModel)]="item.cantidad" (ngModelChange)="actualizarSubtotal(item)" min="1" />
+                  </td>
+                  <td>
+                    <input type="number" class="input input-sm input-bordered w-full text-right" [(ngModel)]="item.precio" (ngModelChange)="actualizarSubtotal(item)" min="0" />
+                  </td>
+                  <td class="font-semibold text-right text-success">
+                    ${{ item.subtotal | number:'1.2-2' }}
+                  </td>
+                  <td class="text-center">
+                    <button class="btn btn-ghost btn-xs btn-square text-error" (click)="removerDelCarrito(i)" title="Quitar">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer con el Total y Botón de Guardar -->
+        <div class="bg-base-200 p-5 rounded-b-xl flex justify-between items-center mt-auto">
+          <div>
+            <span class="text-gray-500 font-semibold block">GRAN TOTAL</span>
+            <span class="text-3xl font-black text-primary">${{ totalFinal | number:'1.2-2' }}</span>
+          </div>
+          <button class="btn btn-primary btn-lg"
+                  (click)="guardarCotizacion()"
+                  [disabled]="guardando || idClienteSeleccionado === 0 || carrito.length === 0">
+            <span *ngIf="guardando" class="loading loading-spinner"></span>
+            Guardar Cotización
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
