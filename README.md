@@ -1,29 +1,42 @@
 # OrgEventos
 
-Plataforma organizadora de eventos.
+Plataforma organizadora de eventos. Este repositorio contiene el **frontend web**, desarrollado con Angular 17.
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.3.17.
+## Módulos incluidos
 
-## Development server
+El frontend contiene pantallas para autenticación, dashboard, clientes, cotizaciones, eventos, pagos y finanzas, proveedores, servicios, usuarios y portal de clientes. La presencia de una pantalla no implica que su flujo esté integrado o validado con el backend.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+## Requisitos
 
-## Code scaffolding
+- Node.js y npm compatibles con Angular CLI 17.
+- El backend/API correspondiente para probar las funciones que consultan o modifican datos.
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Instalación y ejecución
 
-## Build
+```bash
+npm ci
+npm start
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+La aplicación de desarrollo queda disponible en `http://localhost:4200/`.
 
-## Running unit tests
+## Pruebas y compilación
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+```bash
+npm test -- --watch=false
+npm run build
+```
 
-## Running end-to-end tests
+La salida de una compilación exitosa se guarda en `dist/`.
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+## Pendientes y limitaciones conocidas
 
-## Further help
+- **Backend:** no está incluido en este repositorio. La mayoría de las llamadas esperan una API en `https://localhost:7106`; también hay un servicio de tareas que usa una API de AWS. Para probar los flujos se necesita desplegar o iniciar esos servicios, configurar CORS y disponer de HTTPS local válido.
+- **Configuración por entorno:** solo existe `src/environments/environment.ts`. Algunas direcciones de API están escritas directamente en servicios y componentes; conviene centralizarlas y definir valores separados para desarrollo y producción.
+- **Pagos:** el frontend usa Stripe con una clave publicable de pruebas. Para procesar pagos hace falta el backend que cree y gestione los intents de Stripe. La clave secreta de Stripe debe permanecer únicamente en el backend, nunca en el frontend.
+- **Pruebas automatizadas:** `npm test -- --watch=false` actualmente no compila por tres imports de servicios con nombres que no coinciden con sus clases exportadas (`ContratoPdfService`, `SignalRService` y `TicketPdfService`). Además, muchas pruebas existentes solo verifican que el servicio o componente se cree; faltan pruebas de comportamiento e integración.
+- **Compilación de producción:** `npm run build` supera el límite configurado para el paquete inicial: genera aproximadamente 1.30 MB frente al máximo de 1 MB. Hay que optimizar o dividir el bundle antes de una compilación de producción satisfactoria; aumentar el límite debería hacerse solo si está justificado.
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+## Tecnologías principales
+
+Angular 17, TypeScript, RxJS, Tailwind CSS, DaisyUI, SignalR y Stripe.js.
