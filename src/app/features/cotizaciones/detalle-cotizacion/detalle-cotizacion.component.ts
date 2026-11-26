@@ -336,4 +336,30 @@ abrirModalAprobacion() {
     const diff = Math.round((fin.getTime() - inicio.getTime()) / 86400000);
     return diff + 1;
   }
+
+  get especificacionesCotizacion(): {
+    concepto: string;
+    cantidad: number;
+    observaciones: string;
+  }[] {
+    if (!this.cotizacion) return [];
+
+    const externos = (this.cotizacion.serviciosExternos || [])
+      .filter((se: any) => String(se?.observaciones || '').trim().length > 0 || Number(se?.cantidad || 0) > 1)
+      .map((se: any) => ({
+        concepto: se.nombreServicioProveedor || 'Servicio externo',
+        cantidad: Number(se.cantidad || 1),
+        observaciones: String(se.observaciones || '').trim()
+      }));
+
+    const internos = (this.cotizacion.serviciosInternos || [])
+      .filter((si: any) => Number(si?.cantidad || 0) > 1)
+      .map((si: any) => ({
+        concepto: si.nombreServicio || 'Servicio interno',
+        cantidad: Number(si.cantidad || 1),
+        observaciones: ''
+      }));
+
+    return [...externos, ...internos];
+  }
 }

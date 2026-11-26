@@ -42,26 +42,34 @@ export class RegistroUsuarioComponent implements OnInit {
     this.cargarRoles();
   }
 
-  cargarRoles(): void {
-    this.cargandoRoles = true;
-    this.errorMensaje = null;
+cargarRoles(): void {
+  this.cargandoRoles = true;
+  this.errorMensaje = null;
 
-    this.usuariosService.obtenerRoles().subscribe({
-      next: (data) => {
-        this.roles = Array.isArray(data) ? data : [];
-        if (this.roles.length > 0 && !this.modelo.idRol) {
-          const porDefecto = this.roles.find(r => r.nombre.toLowerCase() === 'coordinador') ?? this.roles[0];
-          this.modelo.idRol = porDefecto.idRol;
-        }
-        this.cargandoRoles = false;
-      },
-      error: (err) => {
-        this.errorMensaje = err.error?.mensaje || 'No se pudieron cargar los roles del sistema.';
-        this.cargandoRoles = false;
+  const rolesOcultos = ['recepcionista', 'coordinador'];
+
+  this.usuariosService.obtenerRoles().subscribe({
+    next: (data) => {
+      const lista = Array.isArray(data) ? data : [];
+      this.roles = lista.filter(
+        r => !rolesOcultos.includes((r.nombre || '').trim().toLowerCase())
+      );
+
+      if (this.roles.length > 0 && !this.modelo.idRol) {
+        const porDefecto =
+          this.roles.find(r => r.nombre.toLowerCase() === 'empleado') ??
+          this.roles.find(r => r.nombre.toLowerCase() === 'administrador') ??
+          this.roles[0];
+        this.modelo.idRol = porDefecto.idRol;
       }
-    });
-  }
-
+      this.cargandoRoles = false;
+    },
+    error: (err) => {
+      this.errorMensaje = err.error?.mensaje || 'No se pudieron cargar los roles del sistema.';
+      this.cargandoRoles = false;
+    }
+  });
+}
   registrarUsuario(): void {
     if (this.guardando) return;
 

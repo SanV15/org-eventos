@@ -346,14 +346,14 @@
       </label>
     </div>
 
-    <div class="modal-action">
-      <button class="btn btn-ghost btn-sm" (click)="cerrarModalStripe()">Cancelar</button>
+<div class="modal-action">
+      <button class="btn btn-ghost btn-sm" (click)="cerrarModalStripe()" [disabled]="procesandoPago">Cancelar</button>
       <button 
         class="btn btn-primary btn-sm text-white" 
         (click)="procesarPagoTarjeta()" 
         [disabled]="procesandoPago || cargandoStripe || !autorizaGuardarTarjeta">
         <span *ngIf="procesandoPago" class="loading loading-spinner loading-xs"></span>
-        Pagar {{ cuotaPendienteActual?.saldoRestante | currency }}
+        {{ procesandoPago ? 'Confirmando...' : ('Pagar ' + (cuotaPendienteActual?.saldoRestante | currency)) }}
       </button>
     </div>
   </div>

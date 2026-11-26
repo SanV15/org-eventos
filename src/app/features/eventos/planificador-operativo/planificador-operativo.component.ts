@@ -683,4 +683,39 @@ export class PlanificadorOperativoComponent implements OnInit, OnDestroy {
   exportarPDF() {
     alert('Generando PDF del cronograma para impresión...');
   }
+
+  get especificacionesEventoParaTareas(): {
+    titulo: string;
+    detalle: string;
+  }[] {
+    const items: { titulo: string; detalle: string }[] = [];
+
+    for (const prov of this.planOperativo?.proveedores ?? []) {
+      const obs = String(prov.observaciones || '').trim();
+      if (obs) {
+        items.push({
+          titulo: `${prov.nombreServicio} (${prov.nombreProveedor})`,
+          detalle: obs
+        });
+      }
+    }
+
+    for (const srv of this.planOperativo?.serviciosInternos ?? []) {
+      const desc = String(srv.descripcion || '').trim();
+      if (desc || Number(srv.cantidad || 0) > 1) {
+        items.push({
+          titulo: `${srv.nombre} · Cant: ${srv.cantidad}`,
+          detalle: desc || 'Servicio interno asignado al evento.'
+        });
+      }
+    }
+
+    return items;
+  }
+
+  aplicarObservacionAlHito(texto: string): void {
+    const actual = (this.nuevaTarea.observaciones || '').trim();
+    if (!texto.trim()) return;
+    this.nuevaTarea.observaciones = actual ? `${actual}\n${texto.trim()}` : texto.trim();
+  }
 }

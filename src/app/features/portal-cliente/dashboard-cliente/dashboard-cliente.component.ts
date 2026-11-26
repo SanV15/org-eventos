@@ -10,7 +10,6 @@ import { loadStripe, Stripe, StripeElements, StripeCardElement } from '@stripe/s
 import { environment } from '../../../../environments/environment';
 import { ContratoPdfService } from '../../../core/services/contrato-pdf.service.service';
 import { TicketPdfService } from '../../../core/services/ticket-pdf.service.service';
- // 👈 Importamos el servicio de tickets
 
 @Component({
   selector: 'app-dashboard-cliente',
@@ -25,20 +24,17 @@ export class DashboardClienteComponent implements OnInit {
   private toastr = inject(ToastrService);
   private http = inject(HttpClient);
 
-  // 🚀 Inyección de servicios compartidos
   private contratoPdfService = inject(ContratoPdfService);
-  private ticketPdfService = inject(TicketPdfService); 
+  private ticketPdfService = inject(TicketPdfService);
 
   nombreUsuario: string = '';
   cargando: boolean = true;
   sinContrato: boolean = false;
 
-  // Lista global de eventos del cliente
   misEventos: any[] = [];
   idEventoSeleccionado: number = 0;
   eventoActivo: any = null;
 
-  // Stripe
   stripe: Stripe | null = null;
   elements: StripeElements | null = null;
   cardElement: StripeCardElement | null = null;
@@ -49,12 +45,10 @@ export class DashboardClienteComponent implements OnInit {
   clientSecretSetup: string = '';
   cardElementUpdate: StripeCardElement | null = null;
 
-  // Checkbox de consentimiento para guardar tarjeta
   autorizaGuardarTarjeta: boolean = false;
 
   cuotaPendienteActual: any = null;
 
-  // Estados del Stepper (Estado del Servicio)
   tienePagosRealizados: boolean = false;
   eventoLiquidado: boolean = false;
   esDiaDelEvento: boolean = false;
@@ -82,7 +76,7 @@ export class DashboardClienteComponent implements OnInit {
     this.stripe = await loadStripe(environment.stripePublicKey);
   }
 
-  cargarEventosCliente() {
+  cargarEventosCliente(onComplete?: (eventos: any[]) => void) {
     this.cargando = true;
     const idContratoAnterior = this.idEventoSeleccionado;
 
@@ -91,25 +85,27 @@ export class DashboardClienteComponent implements OnInit {
         if (!eventos || eventos.length === 0) {
           this.sinContrato = true;
           this.cargando = false;
+          onComplete?.([]);
           return;
         }
 
+        this.sinContrato = false;
         this.misEventos = eventos;
         const existeAnterior = eventos.some(e => e.idContrato === idContratoAnterior);
 
-        if (existeAnterior) {
-          this.idEventoSeleccionado = idContratoAnterior;
-        } else {
-          this.idEventoSeleccionado = eventos[0].idContrato;
-        }
+        this.idEventoSeleccionado = existeAnterior
+          ? idContratoAnterior
+          : eventos[0].idContrato;
 
         this.seleccionarEvento(this.idEventoSeleccionado);
         this.cargando = false;
+        onComplete?.(eventos);
       },
       error: (err) => {
         console.error('Error al cargar eventos del cliente:', err);
         this.sinContrato = true;
         this.cargando = false;
+        onComplete?.([]);
       }
     });
   }
@@ -146,7 +142,7 @@ export class DashboardClienteComponent implements OnInit {
 
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    
+
     const fechaEventoObj = new Date(this.eventoActivo.fechaEvento);
     fechaEventoObj.setHours(0, 0, 0, 0);
 
@@ -156,7 +152,7 @@ export class DashboardClienteComponent implements OnInit {
   evaluarAlertaPago(cuota: any) {
     const hoy = new Date();
     const fechaLimite = new Date(cuota.fechaLimite);
-    
+
     hoy.setHours(0, 0, 0, 0);
     fechaLimite.setHours(0, 0, 0, 0);
 
@@ -226,10 +222,52 @@ export class DashboardClienteComponent implements OnInit {
     if (modal) modal.close();
   }
 
+  private esperarConfirmacionServidor(idCuotaPagada: number, montoCobrado: number, intento: number = 1) {
+    const maxIntentos = 5;
+    const retrasoMs = 1200;
+
+    setTimeout(() => {
+      this.cargarEventosCliente((eventos) => {
+        const contratoActual = eventos.find(e => e.idContrato === this.idEventoSeleccionado) || eventos[0];
+        const cuotaActualizada = contratoActual?.cuotas?.find((c: any) => c.idCuota === idCuotaPagada);
+        const yaReflejada = !cuotaActualizada || cuotaActualizada.estado === 'Pagada' || Number(cuotaActualizada.saldoRestante) < montoCobrado;
+
+        if (yaReflejada || intento >= maxIntentos) {
+          this.procesandoPago = false;
+          this.cerrarModalStripe();
+          this.toastr.success(
+            yaReflejada
+              ? '¡Pago confirmado y reflejado en tu estado de cuenta!'
+              : 'Pago recibido en Stripe. Si tarda unos segundos en actualizarse, presiona actualizar.',
+            'Pago Confirmado'
+          );
+
+          try {
+            this.ticketPdfService.generarTicket({
+              idCuota: idCuotaPagada,
+              montoPagado: montoCobrado,
+              metodoPago: 'Tarjeta',
+              fechaPago: new Date().toISOString().split('T')[0]
+            });
+            this.toastr.success('El comprobante se ha descargado exitosamente.', 'PDF Generado');
+          } catch (e) {
+            console.error('Error al generar PDF del cliente', e);
+          }
+          return;
+        }
+
+        this.esperarConfirmacionServidor(idCuotaPagada, montoCobrado, intento + 1);
+      });
+    }, retrasoMs);
+  }
+
   async procesarPagoTarjeta() {
     if (!this.stripe || !this.cardElement || !this.clientSecretStripe || !this.cuotaPendienteActual) return;
 
     this.procesandoPago = true;
+    const idCuotaPagada = this.cuotaPendienteActual.idCuota;
+    const montoCobrado = Number(this.cuotaPendienteActual.saldoRestante);
+
     const resultado = await this.stripe.confirmCardPayment(this.clientSecretStripe, {
       payment_method: { card: this.cardElement }
     });
@@ -241,43 +279,17 @@ export class DashboardClienteComponent implements OnInit {
     }
 
     if (resultado.paymentIntent?.status === 'succeeded') {
-      const payload = {
-        idCuota: this.cuotaPendienteActual.idCuota,
-        montoPagado: this.cuotaPendienteActual.saldoRestante,
-        metodoPago: 'Tarjeta',
-        fechaPago: new Date().toISOString()
-      };
+      const montoReal = resultado.paymentIntent.amount
+        ? resultado.paymentIntent.amount / 100
+        : montoCobrado;
 
-      this.finanzasService.registrarPagoCliente(payload).subscribe({
-        next: () => {
-          this.procesandoPago = false;
-          this.cerrarModalStripe();
-          this.toastr.success('¡Tu abono fue recibido con éxito!', 'Pago Confirmado');
-          
-          // ---> 🚀 USANDO EL SERVICIO EXCLUSIVO DE TICKETS <---
-          try {
-            this.ticketPdfService.generarTicket({
-              idCuota: this.cuotaPendienteActual.idCuota,
-              montoPagado: payload.montoPagado,
-              metodoPago: payload.metodoPago,
-              fechaPago: new Date().toISOString().split('T')[0]
-            });
-            this.toastr.success('El comprobante se ha descargado exitosamente.', 'PDF Generado');
-          } catch (e) {
-            console.error("Error al generar PDF del cliente", e);
-          }
-
-          this.cargarEventosCliente();
-        },
-        error: (err) => {
-          this.procesandoPago = false;
-          this.toastr.error(err.error?.mensaje || 'Error al guardar el abono.', 'Error');
-        }
-      });
+      this.toastr.info('Pago autorizado por Stripe. Confirmando registro en tu cuenta...', 'Procesando');
+      this.esperarConfirmacionServidor(idCuotaPagada, montoReal, 1);
+    } else {
+      this.procesandoPago = false;
     }
   }
 
-  // 📄 MÉTODO PARA DESCARGAR EL CONTRATO OFICIAL USANDO EL SERVICIO COMPARTIDO
   abrirModalContrato() {
     if (!this.eventoActivo || !this.eventoActivo.idContrato) {
       this.toastr.warning('No hay un contrato asociado seleccionado.', 'Aviso');
@@ -288,7 +300,6 @@ export class DashboardClienteComponent implements OnInit {
 
     this.http.get<any>(`${environment.apiUrl}/api/contratos/${this.eventoActivo.idContrato}`).subscribe({
       next: (contratoDetalle) => {
-        // 🚀 Llamada limpia y centralizada al servicio compartido
         this.contratoPdfService.generarPdfContrato(contratoDetalle);
         this.toastr.success('El contrato se ha descargado exitosamente.', 'PDF Generado');
       },
@@ -324,7 +335,7 @@ export class DashboardClienteComponent implements OnInit {
         this.clientSecretSetup = res.clientSecret;
         if (this.stripe) {
           this.elements = this.stripe.elements();
-          
+
           if (this.cardElementUpdate) {
             this.cardElementUpdate.unmount();
             this.cardElementUpdate.destroy();

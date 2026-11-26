@@ -7,9 +7,9 @@
     <h2 class="text-3xl font-bold text-base-content m-0">Generar Presupuesto</h2>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- COLUMNA IZQUIERDA: Controles y Selectores -->
-    <div class="lg:col-span-1 flex flex-col gap-4">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <!-- COLUMNA IZQUIERDA: Controles y Selectores (fija en escritorio) -->
+    <div class="lg:col-span-1 flex flex-col gap-4 lg:sticky lg:top-6">
 
       <!-- 1. Card Fecha de Referencia -->
       <div class="card bg-base-100 shadow-xl border-t-4 border-accent">
@@ -24,14 +24,30 @@
         </div>
       </div>
 
-      <!-- 2. Card Cliente -->
+      <!-- 2. Card Cliente con buscador -->
       <div class="card bg-base-100 shadow-xl border-t-4 border-primary">
         <div class="card-body p-5">
           <h3 class="font-bold text-lg mb-2">2. Datos del Cliente</h3>
-          <div class="form-control w-full">
+          <div class="form-control w-full gap-2">
+            <div class="join w-full">
+              <input
+                type="text"
+                class="input input-bordered input-sm join-item w-full"
+                placeholder="Buscar cliente..."
+                [(ngModel)]="filtroCliente"
+                (ngModelChange)="onFiltroClienteChange()"
+              />
+              <button
+                *ngIf="filtroCliente"
+                type="button"
+                class="btn btn-ghost btn-sm join-item"
+                (click)="filtroCliente = ''; onFiltroClienteChange()"
+                title="Limpiar búsqueda"
+              >✕</button>
+            </div>
             <select class="select select-bordered w-full" [(ngModel)]="idClienteSeleccionado">
-              <option [value]="0" disabled selected>Seleccione un cliente...</option>
-              <option *ngFor="let c of clientes" [value]="c.idCliente">
+              <option [value]="0" disabled selected>Seleccione un cliente ({{ clientesFiltrados.length }})...</option>
+              <option *ngFor="let c of clientesFiltrados" [value]="c.idCliente">
                 {{ c.nombreConDetalle }}
               </option>
             </select>
@@ -39,53 +55,112 @@
         </div>
       </div>
 
-      <!-- 3. Card Agregar Servicios -->
+      <!-- 3. Card Agregar Servicios (desplegable y con buscadores) -->
       <div class="card bg-base-100 shadow-xl border-t-4 border-secondary">
         <div class="card-body p-5">
-          <h3 class="font-bold text-lg mb-4">3. Agregar Conceptos</h3>
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <h3 class="font-bold text-lg m-0">3. Agregar Conceptos</h3>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              (click)="panelConceptosAbierto = !panelConceptosAbierto"
+            >
+              {{ panelConceptosAbierto ? 'Ocultar' : 'Desplegar' }}
+            </button>
+          </div>
 
-          <!-- Servicios Internos -->
-          <div class="form-control w-full mb-4">
-            <label class="label pt-0"><span class="label-text font-semibold text-primary">Servicios de Agencia (Internos)</span></label>
-            <div class="join w-full">
-              <select class="select select-bordered join-item w-full text-sm" [(ngModel)]="servicioInternoSeleccionado">
-                <option [ngValue]="null" disabled selected>Seleccionar...</option>
-                <option *ngFor="let s of serviciosInternosDisponibles" [ngValue]="s">
-                  {{ s.nombre }} (${{ s.precio }})
-                </option>
-              </select>
-              <button class="btn btn-primary join-item" (click)="agregarServicioInterno()">Añadir</button>
+          <div *ngIf="panelConceptosAbierto">
+            <!-- Servicios Internos -->
+            <div class="form-control w-full mb-4">
+              <label class="label pt-0">
+                <span class="label-text font-semibold text-primary">Servicios de Agencia (Internos)</span>
+              </label>
+              <div class="join w-full mb-2">
+                <input
+                  type="text"
+                  class="input input-bordered input-sm join-item w-full text-xs"
+                  placeholder="Buscar servicio interno..."
+                  [(ngModel)]="filtroServicioInterno"
+                  (ngModelChange)="onFiltroInternoChange()"
+                />
+                <button
+                  *ngIf="filtroServicioInterno"
+                  type="button"
+                  class="btn btn-ghost btn-sm join-item"
+                  (click)="filtroServicioInterno = ''; onFiltroInternoChange()"
+                >✕</button>
+              </div>
+              <div class="join w-full">
+                <select class="select select-bordered join-item w-full text-sm" [(ngModel)]="servicioInternoSeleccionado">
+                  <option [ngValue]="null" disabled selected>Seleccionar ({{ serviciosInternosDisponibles.length }})...</option>
+                  <option *ngFor="let s of serviciosInternosDisponibles" [ngValue]="s">
+                    {{ s.nombre }} (${{ s.precio }})
+                  </option>
+                </select>
+                <button type="button" class="btn btn-primary join-item" (click)="agregarServicioInterno()">Añadir</button>
+              </div>
+            </div>
+
+            <div class="divider my-2">O</div>
+
+            <!-- Servicios Externos -->
+            <div class="form-control w-full">
+              <label class="label pt-0">
+                <span class="label-text font-semibold text-secondary">Servicios de Proveedores (Externos)</span>
+              </label>
+              <div class="join w-full mb-2">
+                <input
+                  type="text"
+                  class="input input-bordered input-sm join-item w-full text-xs"
+                  placeholder="Buscar servicio o proveedor..."
+                  [(ngModel)]="filtroServicioExterno"
+                  (ngModelChange)="onFiltroExternoChange()"
+                />
+                <button
+                  *ngIf="filtroServicioExterno"
+                  type="button"
+                  class="btn btn-ghost btn-sm join-item"
+                  (click)="filtroServicioExterno = ''; onFiltroExternoChange()"
+                >✕</button>
+              </div>
+              <div class="join w-full">
+                <select class="select select-bordered join-item w-full text-sm" [(ngModel)]="servicioExternoSeleccionado">
+                  <option [ngValue]="null" disabled selected>Seleccionar ({{ serviciosExternosDisponibles.length }})...</option>
+                  <option *ngFor="let sp of serviciosExternosDisponibles" [ngValue]="sp">
+                    {{ sp.nombreServicio }} — {{ sp.nombreProveedor }} (${{ sp.costo }} · {{ sp.unidadCobro || 'Por evento' }})
+                  </option>
+                </select>
+                <button type="button" class="btn btn-secondary join-item" (click)="agregarServicioExterno()">Añadir</button>
+              </div>
             </div>
           </div>
 
-          <div class="divider my-1">O</div>
-
-          <!-- Servicios Externos -->
-          <div class="form-control w-full">
-            <label class="label"><span class="label-text font-semibold text-secondary">Servicios de Proveedores (Externos)</span></label>
-            <div class="join w-full">
-              <select class="select select-bordered join-item w-full text-sm" [(ngModel)]="servicioExternoSeleccionado">
-                <option [ngValue]="null" disabled selected>Seleccionar...</option>
-HTML
-<option *ngFor="let sp of serviciosExternos" [ngValue]="sp">
-  {{ sp.nombreServicio }} — {{ sp.nombreProveedor }} (${{ sp.costo }} · {{ sp.unidadCobro || 'Por evento' }})
-</option>
-              </select>
-              <button class="btn btn-secondary join-item" (click)="agregarServicioExterno()">Añadir</button>
-            </div>
-          </div>
-
+          <p *ngIf="!panelConceptosAbierto" class="text-xs text-base-content/60 m-0">
+            Panel contraído para mantener el enfoque en el resumen. Haz clic en <strong>Desplegar</strong> para añadir más conceptos.
+          </p>
         </div>
       </div>
     </div>
+
+    
 
     <!-- COLUMNA DERECHA: El Carrito y Total -->
     <div class="lg:col-span-2">
       <div class="card bg-base-100 shadow-xl h-full flex flex-col">
         <div class="card-body p-0 flex-grow">
-          <div class="p-5 border-b border-base-200">
-            <h3 class="font-bold text-lg">4. Resumen de Cotización</h3>
+          <div class="p-5 border-b border-base-200 flex items-center justify-between gap-2">
+            <h3 class="font-bold text-lg m-0">4. Resumen de Cotización</h3>
+            <span class="badge badge-neutral badge-sm">{{ carrito.length }} concepto(s)</span>
           </div>
+
+          <div class="alert alert-info py-2 px-3 text-xs mt-3 flex flex-col gap-0.5">
+  <span class="font-semibold">Consideración de cantidades según modalidad:</span>
+  <span>
+    <strong>Cantidades según el tipo de cobro:</strong> Los servicios <strong>por unidad</strong> deben indicar cuántas piezas se necesitan, mientras que los servicios <strong>por evento</strong> deben especificar cuántos paquetes, montajes o turnos se contratarán.
+  </span>
+</div>
+
+          
 
           <div class="overflow-x-auto w-full">
             <table class="table table-zebra w-full">
@@ -115,22 +190,25 @@ HTML
                         {{ item.unidadCobro || 'Por evento' }}
                       </span>
                     </div>
-<p *ngIf="item.tipo === 'Externo' && item.unidadCobro === 'Por unidad'" class="text-[11px] text-info mt-1">
-  Se calcula por cantidad de unidades contratadas (precio × cantidad).
-</p>
+                    <p *ngIf="item.descripcion" class="text-xs text-base-content/75 mt-1">
+                      {{ item.descripcion }}
+                    </p>
+                    <p *ngIf="item.tipo === 'Externo' && item.unidadCobro === 'Por unidad'" class="text-[11px] text-info mt-1">
+                      Se calcula por cantidad de unidades contratadas (precio × cantidad).
+                    </p>
                     <input *ngIf="item.tipo === 'Externo'" type="text" class="input input-xs input-bordered w-full mt-2" placeholder="Observaciones (ej. Sujeto a disponibilidad)" [(ngModel)]="item.observaciones" />
                   </td>
                   <td>
                     <input type="number" class="input input-sm input-bordered w-full text-center" [(ngModel)]="item.cantidad" (ngModelChange)="actualizarSubtotal(item)" min="1" />
                   </td>
-                  <td>
-                    <input type="number" class="input input-sm input-bordered w-full text-right" [(ngModel)]="item.precio" (ngModelChange)="actualizarSubtotal(item)" min="0" />
+                  <td class="text-right font-medium text-base-content/80">
+                    ${{ item.precio | number:'1.2-2' }}
                   </td>
                   <td class="font-semibold text-right text-success">
                     ${{ item.subtotal | number:'1.2-2' }}
                   </td>
                   <td class="text-center">
-                    <button class="btn btn-ghost btn-xs btn-square text-error" (click)="removerDelCarrito(i)" title="Quitar">
+                    <button type="button" class="btn btn-ghost btn-xs btn-square text-error" (click)="removerDelCarrito(i)" title="Quitar">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </td>
@@ -146,7 +224,7 @@ HTML
             <span class="text-gray-500 font-semibold block">GRAN TOTAL</span>
             <span class="text-3xl font-black text-primary">${{ totalFinal | number:'1.2-2' }}</span>
           </div>
-          <button class="btn btn-primary btn-lg"
+          <button type="button" class="btn btn-primary btn-lg"
                   (click)="guardarCotizacion()"
                   [disabled]="guardando || idClienteSeleccionado === 0 || carrito.length === 0">
             <span *ngIf="guardando" class="loading loading-spinner"></span>

@@ -12,6 +12,7 @@ interface ItemCarrito {
   tipo: 'Interno' | 'Externo';
   idServicio: number;
   nombre: string;
+  descripcion?: string;
   unidadCobro?: UnidadCobroExterno;
   cantidad: number;
   precio: number;
@@ -38,6 +39,14 @@ export class NuevaCotizacionComponent implements OnInit {
   idClienteSeleccionado: number = 0;
   fechaReferencia: string = '';
 
+  // Filtros de búsqueda
+  filtroCliente: string = '';
+  filtroServicioInterno: string = '';
+  filtroServicioExterno: string = '';
+
+  // Panel desplegable para agregar conceptos sin que se pierda al trabajar en el resumen
+  panelConceptosAbierto: boolean = true;
+
   carrito: ItemCarrito[] = [];
   totalFinal: number = 0;
   guardando: boolean = false;
@@ -45,14 +54,37 @@ export class NuevaCotizacionComponent implements OnInit {
   servicioInternoSeleccionado: any = null;
   servicioExternoSeleccionado: any = null;
 
+  get clientesFiltrados(): any[] {
+    const q = this.filtroCliente.trim().toLowerCase();
+    if (!q) return this.clientes;
+    return this.clientes.filter(c =>
+      String(c?.nombreConDetalle ?? c?.nombre ?? '').toLowerCase().includes(q)
+    );
+  }
+
   get serviciosInternosDisponibles(): ServicioListado[] {
     const idsAgregados = this.carrito.filter(i => i.tipo === 'Interno').map(i => i.idServicio);
-    return this.serviciosInternos.filter(s => !idsAgregados.includes(s.idServicio));
+    const base = this.serviciosInternos.filter(s => !idsAgregados.includes(s.idServicio));
+    const q = this.filtroServicioInterno.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(s =>
+      String(s?.nombre ?? '').toLowerCase().includes(q) ||
+      String(s?.descripcion ?? '').toLowerCase().includes(q) ||
+      String(s?.precio ?? '').toLowerCase().includes(q)
+    );
   }
 
   get serviciosExternosDisponibles(): any[] {
     const idsAgregados = this.carrito.filter(i => i.tipo === 'Externo').map(i => i.idServicio);
-    return this.serviciosExternos.filter(se => !idsAgregados.includes(se.idServicioProveedor));
+    const base = this.serviciosExternos.filter(se => !idsAgregados.includes(se.idServicioProveedor));
+    const q = this.filtroServicioExterno.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(se =>
+      String(se?.nombreServicio ?? '').toLowerCase().includes(q) ||
+      String(se?.nombreProveedor ?? '').toLowerCase().includes(q) ||
+      String(se?.unidadCobro ?? '').toLowerCase().includes(q) ||
+      String(se?.costo ?? '').toLowerCase().includes(q)
+    );
   }
 
   ngOnInit(): void {
@@ -76,20 +108,47 @@ export class NuevaCotizacionComponent implements OnInit {
     });
   }
 
+  onFiltroClienteChange() {
+    if (this.idClienteSeleccionado && !this.clientesFiltrados.some(c => Number(c.idCliente) === Number(this.idClienteSeleccionado))) {
+      this.idClienteSeleccionado = 0;
+    }
+  }
+
+  onFiltroInternoChange() {
+    if (this.servicioInternoSeleccionado && !this.serviciosInternosDisponibles.some(s => s.idServicio === this.servicioInternoSeleccionado.idServicio)) {
+      this.servicioInternoSeleccionado = null;
+    }
+  }
+
+  onFiltroExternoChange() {
+    if (this.servicioExternoSeleccionado && !this.serviciosExternosDisponibles.some(se => se.idServicioProveedor === this.servicioExternoSeleccionado.idServicioProveedor)) {
+      this.servicioExternoSeleccionado = null;
+    }
+  }
+
   private normalizarUnidad(unidad?: string): UnidadCobroExterno {
     return unidad === 'Por unidad' ? 'Por unidad' : 'Por evento';
+  }
+
+  private obtenerDescripcionExterna(sp: any): string {
+    const raw = sp?.descripcion ?? sp?.descripcionServicio ?? sp?.detalles ?? '';
+    return String(raw).trim();
   }
 
   agregarServicioInterno() {
     if (!this.servicioInternoSeleccionado) return;
 
+    const precioFijo = Number(this.servicioInternoSeleccionado.precio ?? 0);
+    const descripcion = String(this.servicioInternoSeleccionado.descripcion ?? '').trim();
+
     this.carrito.push({
       tipo: 'Interno',
       idServicio: this.servicioInternoSeleccionado.idServicio,
       nombre: this.servicioInternoSeleccionado.nombre,
+      descripcion,
       cantidad: 1,
-      precio: this.servicioInternoSeleccionado.precio,
-      subtotal: this.servicioInternoSeleccionado.precio
+      precio: precioFijo,
+      subtotal: precioFijo
     });
 
     this.servicioInternoSeleccionado = null;
@@ -100,15 +159,18 @@ export class NuevaCotizacionComponent implements OnInit {
     if (!this.servicioExternoSeleccionado) return;
 
     const unidad = this.normalizarUnidad(this.servicioExternoSeleccionado.unidadCobro);
+    const precioFijo = Number(this.servicioExternoSeleccionado.costo ?? 0);
+    const descripcion = this.obtenerDescripcionExterna(this.servicioExternoSeleccionado);
 
     this.carrito.push({
       tipo: 'Externo',
       idServicio: this.servicioExternoSeleccionado.idServicioProveedor,
       nombre: this.servicioExternoSeleccionado.nombreServicio,
+      descripcion,
       unidadCobro: unidad,
       cantidad: 1,
-      precio: this.servicioExternoSeleccionado.costo,
-      subtotal: this.servicioExternoSeleccionado.costo,
+      precio: precioFijo,
+      subtotal: precioFijo,
       observaciones: ''
     });
 
@@ -118,8 +180,8 @@ export class NuevaCotizacionComponent implements OnInit {
 
   actualizarSubtotal(item: ItemCarrito) {
     if (item.cantidad < 1) item.cantidad = 1;
-    if (item.precio < 0) item.precio = 0;
-    item.subtotal = item.cantidad * item.precio;
+    const precioFijo = Number(item.precio ?? 0);
+    item.subtotal = item.cantidad * precioFijo;
     this.calcularTotal();
   }
 

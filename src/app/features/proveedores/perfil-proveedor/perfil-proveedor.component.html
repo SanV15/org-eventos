@@ -99,7 +99,11 @@
 
       <!-- Formulario de Registro -->
       <div class="bg-base-200 p-4 rounded-xl mb-6">
-        <h4 class="font-semibold text-sm mb-3">Agregar Nuevo Servicio</h4>
+        <h4 class="font-semibold text-sm mb-1">Agregar Nuevo Servicio</h4>
+        <p class="text-xs text-base-content/70 mb-3">
+          Especifica en la descripción el rendimiento o capacidad por unidad (por ejemplo: <em>"Capacidad para 10 sillas/invitados"</em> o <em>"1 mantel por mesa"</em>) para calcular cantidades con precisión al cotizar.
+        </p>
+
         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
           <div class="form-control md:col-span-3">
             <label class="label"><span class="label-text">Nombre del Servicio</span></label>
@@ -107,8 +111,8 @@
           </div>
 
           <div class="form-control md:col-span-4">
-            <label class="label"><span class="label-text">Descripción</span></label>
-            <input type="text" class="input input-bordered input-sm w-full bg-white" [(ngModel)]="nuevoServicio.descripcion" placeholder="Ej. Incluye entrada, plato fuerte y postre" />
+            <label class="label"><span class="label-text">Descripción y Especificación</span></label>
+            <input type="text" class="input input-bordered input-sm w-full bg-white" [(ngModel)]="nuevoServicio.descripcion" placeholder="Ej. Mesa redonda para 10 sillas (indicar capacidad/regla)" />
           </div>
 
           <div class="form-control md:col-span-2">
@@ -129,6 +133,11 @@
             </button>
           </div>
         </div>
+
+        <div class="mt-2 text-[11px] text-base-content/65 flex flex-wrap gap-x-4 gap-y-1">
+          <span><strong>Tip por unidad:</strong> indica cuántas personas, mesas o piezas cubre cada unidad (ej. <em>"10 sillas por mesa"</em>).</span>
+          <span><strong>Tip por evento:</strong> indica qué incluye el paquete o traslados/montaje.</span>
+        </div>
       </div>
 
       <!-- Tabla de Servicios -->
@@ -141,7 +150,7 @@
           <thead class="bg-base-200">
             <tr>
               <th>Servicio</th>
-              <th>Descripción</th>
+              <th>Descripción / Especificación</th>
               <th>Costo Ref.</th>
               <th>Disponibilidad Hoy</th>
               <th>Estado</th>
@@ -269,8 +278,11 @@
       </div>
 
       <div class="form-control mb-3">
-        <label class="label"><span class="label-text">Descripción</span></label>
-        <textarea class="textarea textarea-bordered w-full" [(ngModel)]="servicioEnEdicion.descripcion" rows="2"></textarea>
+        <label class="label"><span class="label-text">Descripción y Especificación</span></label>
+        <textarea class="textarea textarea-bordered w-full" [(ngModel)]="servicioEnEdicion.descripcion" rows="2" placeholder="Ej. Capacidad por unidad, sillas por mesa, cobertura..."></textarea>
+        <span class="text-[11px] text-base-content/60 mt-1">
+          Anota aquí capacidad por unidad o reglas de cantidad (ej. <em>"10 personas por mesa"</em>).
+        </span>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">

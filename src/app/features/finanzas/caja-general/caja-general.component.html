@@ -3,50 +3,72 @@
     <app-breadcrumbs />
   </div>
 
-  <div class="mb-6 flex items-center gap-3">
-    <a routerLink="/dashboard" class="btn btn-circle btn-ghost btn-sm" title="Regresar al Panel de Control">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-      </svg>
-    </a>
-    <div>
-      <h2 class="text-3xl font-bold text-base-content m-0">Pagos y Caja General</h2>
-      <p class="text-base-content/70 text-sm">Visión global contable, ingresos reales y cuentas por cobrar.</p>
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <a routerLink="/dashboard" class="btn btn-circle btn-ghost btn-sm" title="Regresar al Panel de Control">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </a>
+      <div>
+        <h2 class="text-3xl font-bold text-base-content m-0">Pagos y Caja General</h2>
+        <p class="text-base-content/70 text-sm">Control operativo de ingresos acumulados, egresos, cobranza y saldo neto.</p>
+      </div>
     </div>
+
+    <button
+      type="button"
+      class="btn btn-outline btn-sm gap-2"
+      (click)="cargarDatosFinancieros()"
+      [disabled]="cargando"
+    >
+      <span *ngIf="cargando" class="loading loading-spinner loading-xs"></span>
+      Actualizar
+    </button>
   </div>
 
   <div *ngIf="cargando" class="flex justify-center py-12">
     <span class="loading loading-spinner text-primary loading-lg"></span>
   </div>
 
-  <div *ngIf="!cargando && errorMensaje" class="alert alert-error shadow-lg mb-6">
-    <span>{{ errorMensaje }}</span>
-  </div>
+  <ng-container *ngIf="!cargando">
+    <!-- Error de resumen con reintento -->
+    <div *ngIf="errores.resumen" class="alert alert-error shadow-sm mb-6 flex justify-between items-center">
+      <span>{{ errores.resumen }}</span>
+      <button type="button" class="btn btn-sm btn-ghost" (click)="cargarDatosFinancieros()">Reintentar</button>
+    </div>
 
-  <ng-container *ngIf="!cargando && resumen">
     <!-- Indicadores Financieros (KPIs) -->
-    <div class="stats shadow w-full mb-8 bg-base-100 border border-base-300">
+    <div *ngIf="resumen" class="stats stats-vertical lg:stats-horizontal shadow w-full mb-8 bg-base-100 border border-base-300">
       <div class="stat text-center">
-        <div class="stat-title text-base-content/60 font-semibold">Total en Caja (Ingresado)</div>
+        <div class="stat-title text-base-content/60 font-semibold">Ingresos Acumulados</div>
         <div class="stat-value text-success">${{ resumen.totalEnCaja | number:'1.2-2' }}</div>
-        <div class="stat-desc">Dinero real en cuentas</div>
+        <div class="stat-desc">Cobros registrados a clientes (histórico)</div>
       </div>
 
-      <div class="stat text-center border-l border-base-200">
-        <div class="stat-title text-base-content/60 font-semibold">Cuentas por Cobrar</div>
-        <div class="stat-value text-error">${{ resumen.cuentasPorCobrar | number:'1.2-2' }}</div>
-        <div class="stat-desc">Saldos pendientes (Contratos Activos)</div>
-      </div>
-
-      <div class="stat text-center border-l border-base-200">
+      <div class="stat text-center">
         <div class="stat-title text-base-content/60 font-semibold">Egresos a Proveedores</div>
         <div class="stat-value text-warning">${{ resumen.egresosTotales | number:'1.2-2' }}</div>
-        <div class="stat-desc">Capital invertido en servicios externos</div>
+        <div class="stat-desc">Pagos registrados a proveedores (histórico)</div>
+      </div>
+
+      <div class="stat text-center">
+        <div class="stat-title text-base-content/60 font-semibold">Saldo Neto (Ingresos - Egresos)</div>
+        <div class="stat-value" [ngClass]="saldoNeto >= 0 ? 'text-primary' : 'text-error'">
+          ${{ saldoNeto | number:'1.2-2' }}
+        </div>
+        <div class="stat-desc">Diferencia acumulada en caja</div>
+      </div>
+
+      <div class="stat text-center">
+        <div class="stat-title text-base-content/60 font-semibold">Cuentas por Cobrar</div>
+        <div class="stat-value text-error">${{ resumen.cuentasPorCobrar | number:'1.2-2' }}</div>
+        <div class="stat-desc">Saldo neto pendiente en cuotas activas</div>
       </div>
     </div>
 
     <!-- Navegación de Pestañas -->
-    <div class="tabs tabs-boxed mb-6 bg-base-200 p-2 inline-flex gap-1">
+    <div class="tabs tabs-boxed mb-6 bg-base-200 p-2 inline-flex flex-wrap gap-1">
       <a class="tab tab-lg"
          [ngClass]="{'tab-active bg-primary text-primary-content font-bold': pestanaActiva === 'flujo'}"
          (click)="cambiarPestana('flujo')">Flujo de Caja (Libro Mayor)</a>
@@ -59,114 +81,174 @@
     </div>
 
     <!-- PESTAÑA 1: Flujo de Caja -->
-    <div *ngIf="pestanaActiva === 'flujo'" class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
-      <table class="table w-full">
-        <thead class="bg-base-200 text-base-content/80">
-          <tr>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Entidad (Cliente/Proveedor)</th>
-            <th>Concepto</th>
-            <th class="text-right">Monto</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let t of transacciones" class="hover:bg-base-200/50">
-            <td>{{ t.fecha | date:'mediumDate' }}</td>
-            <td>
-              <span class="badge font-semibold whitespace-nowrap" [ngClass]="t.tipo === 'Ingreso' ? 'badge-success badge-outline' : 'badge-error badge-outline'">
-                {{ t.tipo }}
-              </span>
-            </td>
-            <td class="font-medium">{{ t.entidad }}</td>
-            <td class="text-sm text-base-content/70">{{ t.concepto }}</td>
-            <td class="text-right font-bold whitespace-nowrap" [ngClass]="t.tipo === 'Ingreso' ? 'text-success' : 'text-error'">
-              {{ t.tipo === 'Ingreso' ? '+' : '-' }}${{ t.monto | number:'1.2-2' }}
-            </td>
-          </tr>
-          <tr *ngIf="transacciones.length === 0">
-            <td colspan="5" class="text-center py-8 text-base-content/60">No hay transacciones registradas.</td>
-          </tr>
-        </tbody>
-      </table>
+    <div *ngIf="pestanaActiva === 'flujo'">
+      <div *ngIf="errores.flujo" class="alert alert-error shadow-sm mb-4 flex justify-between items-center">
+        <span>{{ errores.flujo }}</span>
+        <button type="button" class="btn btn-sm btn-ghost" (click)="cargarDatosFinancieros()">Reintentar</button>
+      </div>
+
+      <!-- Barra de filtros y exportación -->
+      <div class="bg-base-100 rounded-box shadow border border-base-300 p-4 mb-4 flex flex-wrap items-end gap-3">
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-semibold">Tipo</span></label>
+          <select class="select select-bordered select-sm" [(ngModel)]="filtroTipo">
+            <option value="Todos">Todos</option>
+            <option value="Ingreso">Ingresos</option>
+            <option value="Egreso">Egresos</option>
+          </select>
+        </div>
+
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-semibold">Desde</span></label>
+          <input type="date" class="input input-bordered input-sm" [(ngModel)]="fechaDesde" />
+        </div>
+
+        <div class="form-control">
+          <label class="label py-1"><span class="label-text text-xs font-semibold">Hasta</span></label>
+          <input type="date" class="input input-bordered input-sm" [(ngModel)]="fechaHasta" />
+        </div>
+
+        <div class="form-control flex-1 min-w-[180px]">
+          <label class="label py-1"><span class="label-text text-xs font-semibold">Buscar entidad o concepto</span></label>
+          <input
+            type="text"
+            class="input input-bordered input-sm w-full"
+            placeholder="Ej. Boda, Transferencia, Cliente..."
+            [(ngModel)]="filtroTexto"
+          />
+        </div>
+
+        <button type="button" class="btn btn-ghost btn-sm" (click)="limpiarFiltros()">Limpiar</button>
+        <button type="button" class="btn btn-outline btn-primary btn-sm" (click)="exportarFlujoCsv()">Exportar CSV</button>
+      </div>
+
+      <div class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
+        <table class="table w-full">
+          <thead class="bg-base-200 text-base-content/80">
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Referencia</th>
+              <th>Entidad (Cliente/Proveedor)</th>
+              <th>Concepto</th>
+              <th>Método</th>
+              <th class="text-right">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of transaccionesFiltradas" class="hover:bg-base-200/50">
+              <td>{{ t.fecha | date:'mediumDate' }}</td>
+              <td>
+                <span class="badge font-semibold whitespace-nowrap" [ngClass]="t.tipo === 'Ingreso' ? 'badge-success badge-outline' : 'badge-error badge-outline'">
+                  {{ t.tipo }}
+                </span>
+              </td>
+              <td class="font-mono text-xs">{{ t.referencia }}</td>
+              <td class="font-medium">{{ t.entidad }}</td>
+              <td class="text-sm text-base-content/70">{{ t.concepto }}</td>
+              <td class="text-xs text-base-content/70">{{ t.metodoPago || '—' }}</td>
+              <td class="text-right font-bold whitespace-nowrap" [ngClass]="t.tipo === 'Ingreso' ? 'text-success' : 'text-error'">
+                {{ t.tipo === 'Ingreso' ? '+' : '-' }}${{ t.monto | number:'1.2-2' }}
+              </td>
+            </tr>
+            <tr *ngIf="transaccionesFiltradas.length === 0">
+              <td colspan="7" class="text-center py-8 text-base-content/60">No hay transacciones que coincidan con los filtros.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- PESTAÑA 2: Cobranza Activa -->
-    <div *ngIf="pestanaActiva === 'cobranza'" class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
-      <table class="table w-full">
-        <thead class="bg-base-200 text-base-content/80">
-          <tr>
-            <th>Folio</th>
-            <th>Cliente y Evento</th>
-            <th>Total Acordado</th>
-            <th>Saldo Pendiente</th>
-            <th>Próximo Vencimiento</th>
-            <th class="text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let c of cobranza" class="hover:bg-base-200/50">
-            <td class="font-semibold text-base-content/70">#{{ c.idContrato | number:'3.0-0' }}</td>
-            <td>
-              <div class="font-bold">{{ c.cliente }}</div>
-              <div class="text-xs text-base-content/60">{{ c.nombreEvento }}</div>
-            </td>
-            <td>${{ c.totalContrato | number:'1.2-2' }}</td>
-            <td class="font-bold text-error">${{ c.saldoPendiente | number:'1.2-2' }}</td>
-            <td>
-              <div *ngIf="c.proximoVencimiento">
-                <div>{{ c.proximoVencimiento | date:'mediumDate' }}</div>
-                <span class="badge badge-sm mt-1 whitespace-nowrap"
-                     [ngClass]="{'badge-error badge-outline': c.estadoMorosidad === 'Atrasado', 'badge-warning badge-outline': c.estadoMorosidad === 'Vence hoy', 'badge-success badge-outline': c.estadoMorosidad === 'Al día'}">
-                  {{ c.estadoMorosidad }}
-                </span>
-              </div>
-              <div *ngIf="!c.proximoVencimiento" class="text-base-content/50 text-sm">Sin cuotas pendientes</div>
-            </td>
-            <td class="text-right">
-              <a [routerLink]="['/clientes', c.idCliente, 'finanzas']" class="btn btn-sm btn-outline btn-primary">Ver Cuenta</a>
-            </td>
-          </tr>
-          <tr *ngIf="cobranza.length === 0">
-            <td colspan="6" class="text-center py-8 text-base-content/60">No hay saldos pendientes por cobrar.</td>
-          </tr>
-        </tbody>
-      </table>
+    <div *ngIf="pestanaActiva === 'cobranza'">
+      <div *ngIf="errores.cobranza" class="alert alert-error shadow-sm mb-4 flex justify-between items-center">
+        <span>{{ errores.cobranza }}</span>
+        <button type="button" class="btn btn-sm btn-ghost" (click)="cargarDatosFinancieros()">Reintentar</button>
+      </div>
+
+      <div class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
+        <table class="table w-full">
+          <thead class="bg-base-200 text-base-content/80">
+            <tr>
+              <th>Folio</th>
+              <th>Cliente y Evento</th>
+              <th>Total Acordado</th>
+              <th>Saldo Pendiente</th>
+              <th>Próximo Vencimiento</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of cobranza" class="hover:bg-base-200/50">
+              <td class="font-semibold text-base-content/70">#{{ c.idContrato | number:'3.0-0' }}</td>
+              <td>
+                <div class="font-bold">{{ c.cliente }}</div>
+                <div class="text-xs text-base-content/60">{{ c.nombreEvento }}</div>
+              </td>
+              <td>${{ c.totalContrato | number:'1.2-2' }}</td>
+              <td class="font-bold text-error">${{ c.saldoPendiente | number:'1.2-2' }}</td>
+              <td>
+                <div *ngIf="c.proximoVencimiento">
+                  <div>{{ c.proximoVencimiento | date:'mediumDate' }}</div>
+                  <span class="badge badge-sm mt-1 whitespace-nowrap"
+                       [ngClass]="{'badge-error badge-outline': c.estadoMorosidad === 'Atrasado', 'badge-warning badge-outline': c.estadoMorosidad === 'Vence hoy', 'badge-success badge-outline': c.estadoMorosidad === 'Al día'}">
+                    {{ c.estadoMorosidad }}
+                  </span>
+                </div>
+                <div *ngIf="!c.proximoVencimiento" class="text-base-content/50 text-sm">Sin cuotas pendientes</div>
+              </td>
+              <td class="text-right">
+                <a [routerLink]="['/clientes', c.idCliente, 'finanzas']" class="btn btn-sm btn-outline btn-primary">Ver Cuenta</a>
+              </td>
+            </tr>
+            <tr *ngIf="cobranza.length === 0">
+              <td colspan="6" class="text-center py-8 text-base-content/60">No hay saldos pendientes por cobrar.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- PESTAÑA 3: Pagos a Proveedores -->
-    <div *ngIf="pestanaActiva === 'proveedores'" class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
-      <table class="table w-full">
-        <thead class="bg-base-200 text-base-content/80">
-          <tr>
-            <th>Evento</th>
-            <th>Proveedor</th>
-            <th>Servicio Contratado</th>
-            <th>Costo Acordado</th>
-            <th>Abonado</th>
-            <th>Saldo Pendiente</th>
-            <th class="text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of proveedores" class="hover:bg-base-200/50">
-            <td class="font-bold">{{ item.evento }}</td>
-            <td class="font-semibold text-primary">{{ item.proveedor }}</td>
-            <td>{{ item.servicio }}</td>
-            <td>${{ item.costoAcordado | number:'1.2-2' }}</td>
-            <td class="text-success">${{ item.montoPagado | number:'1.2-2' }}</td>
-            <td class="font-bold text-error">${{ item.saldoPendiente | number:'1.2-2' }}</td>
-            <td class="text-right">
-              <button class="btn btn-sm btn-error text-error-content" (click)="abrirModalPagoProveedor(item)">
-                Liquidar / Abonar
-              </button>
-            </td>
-          </tr>
-          <tr *ngIf="proveedores.length === 0">
-            <td colspan="7" class="text-center py-8 text-base-content/60">No hay egresos pendientes a proveedores.</td>
-          </tr>
-        </tbody>
-      </table>
+    <div *ngIf="pestanaActiva === 'proveedores'">
+      <div *ngIf="errores.proveedores" class="alert alert-error shadow-sm mb-4 flex justify-between items-center">
+        <span>{{ errores.proveedores }}</span>
+        <button type="button" class="btn btn-sm btn-ghost" (click)="cargarDatosFinancieros()">Reintentar</button>
+      </div>
+
+      <div class="bg-base-100 rounded-box shadow border border-base-300 overflow-x-auto">
+        <table class="table w-full">
+          <thead class="bg-base-200 text-base-content/80">
+            <tr>
+              <th>Evento</th>
+              <th>Proveedor</th>
+              <th>Servicio Contratado</th>
+              <th>Costo Acordado</th>
+              <th>Abonado</th>
+              <th>Saldo Pendiente</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of proveedores" class="hover:bg-base-200/50">
+              <td class="font-bold">{{ item.evento }}</td>
+              <td class="font-semibold text-primary">{{ item.proveedor }}</td>
+              <td>{{ item.servicio }}</td>
+              <td>${{ item.costoAcordado | number:'1.2-2' }}</td>
+              <td class="text-success">${{ item.montoPagado | number:'1.2-2' }}</td>
+              <td class="font-bold text-error">${{ item.saldoPendiente | number:'1.2-2' }}</td>
+              <td class="text-right">
+                <button class="btn btn-sm btn-error text-error-content" (click)="abrirModalPagoProveedor(item)">
+                  Liquidar / Abonar
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="proveedores.length === 0">
+              <td colspan="7" class="text-center py-8 text-base-content/60">No hay egresos pendientes a proveedores.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </ng-container>
 </div>
@@ -181,6 +263,8 @@
         <label class="label"><span class="label-text font-semibold">Monto a pagar (MXN)</span></label>
         <input
           type="number"
+          step="0.01"
+          min="0.01"
           class="input input-bordered w-full"
           [(ngModel)]="datosPagoProveedor.montoPagado"
           name="montoPagado"

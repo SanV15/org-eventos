@@ -8,6 +8,7 @@ export interface RegistrarPagoCliente {
   montoPagado: number;
   metodoPago: string;
   fechaPago: string;
+  referencia?: string;
 }
 
 export interface RegistrarPagoProveedor {
@@ -15,6 +16,35 @@ export interface RegistrarPagoProveedor {
   montoPagado: number;
   metodoPago: string;
   fechaPago: string;
+  referencia?: string;
+}
+
+export interface ResumenFinanciero {
+  totalEnCaja: number;
+  cuentasPorCobrar: number;
+  egresosTotales: number;
+  margenBruto?: number;
+}
+
+export interface Transaccion {
+  fecha: string;
+  tipo: 'Ingreso' | 'Egreso' | string;
+  entidad: string;
+  concepto: string;
+  monto: number;
+  referencia?: string;
+  metodoPago?: string;
+}
+
+export interface CobranzaActiva {
+  idContrato: number;
+  idCliente: number;
+  cliente: string;
+  nombreEvento: string;
+  totalContrato: number;
+  saldoPendiente: number;
+  proximoVencimiento?: string | null;
+  estadoMorosidad?: string;
 }
 
 @Injectable({
@@ -44,32 +74,31 @@ export class FinanzasService {
     return this.http.get<any[]>(`${this.apiUrl}/contratos`);
   }
 
-  obtenerResumenFinanciero(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/resumen`);
+  obtenerResumenFinanciero(): Observable<ResumenFinanciero> {
+    return this.http.get<ResumenFinanciero>(`${this.apiUrl}/resumen`);
   }
 
-  obtenerCobranzaActiva(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/cobranza-activa`);
+  obtenerCobranzaActiva(): Observable<CobranzaActiva[]> {
+    return this.http.get<CobranzaActiva[]>(`${this.apiUrl}/cobranza-activa`);
   }
 
-  obtenerFlujoCaja(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/flujo-caja`);
+  obtenerFlujoCaja(): Observable<Transaccion[]> {
+    return this.http.get<Transaccion[]>(`${this.apiUrl}/flujo-caja`);
   }
 
   obtenerProveedoresPendientes(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/proveedores-pendientes`);
   }
-  
-crearIntentPago(monto: number): Observable<any> {
-  return this.http.post<any>(`${this.apiUrl}/crear-intent-pago`, { monto });
-}
 
-obtenerMisEventosCliente(): Observable<any[]> {
-  return this.http.get<any[]>(`${this.apiUrl}/mis-eventos`);
-}
+  crearIntentPago(monto: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/crear-intent-pago`, { monto });
+  }
 
-crearSetupIntent(): Observable<any> {
-  return this.http.post<any>(`${this.apiUrl}/crear-setup-intent`, {});
-}
+  obtenerMisEventosCliente(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/mis-eventos`);
+  }
 
+  crearSetupIntent(): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/crear-setup-intent`, {});
+  }
 }

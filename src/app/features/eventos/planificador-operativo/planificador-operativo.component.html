@@ -3,8 +3,6 @@
     <app-breadcrumbs />
   </div>
 
-
-<div class="p-6 max-w-7xl mx-auto">
   <a
     routerLink="/eventos"
     class="btn btn-ghost btn-sm mb-4 text-base-content/60 hover:text-primary"
@@ -30,10 +28,10 @@
       </p>
     </div>
     <div class="flex gap-2">
-      <button class="btn btn-outline" (click)="exportarPDF()">
+      <button type="button" class="btn btn-outline" (click)="exportarPDF()">
         Exportar PDF
       </button>
-      <button class="btn btn-primary" (click)="abrirModalTarea()">
+      <button type="button" class="btn btn-primary" (click)="abrirModalTarea()">
         + Nuevo Hito
       </button>
     </div>
@@ -157,6 +155,13 @@
                   {{ t.descripcion || "Sin detalles logísticos." }}
                 </p>
 
+                <p
+                  *ngIf="t.observaciones"
+                  class="text-xs text-base-content/75 bg-base-200/70 rounded-lg px-3 py-2 mt-2 whitespace-pre-line"
+                >
+                  <strong>Observaciones:</strong> {{ t.observaciones }}
+                </p>
+
                 <!-- Incidencias -->
                 <div
                   *ngIf="t.incidencias && t.incidencias.length > 0"
@@ -235,6 +240,7 @@
 
               <div class="flex-shrink-0 flex flex-row md:flex-col gap-2 self-end md:self-center">
                 <button
+                  type="button"
                   class="btn btn-sm btn-ghost btn-circle"
                   [disabled]="t.estado === 'Completada' || t.estado === 'Cancelada'"
                   (click)="abrirModalEditar(t)"
@@ -243,6 +249,7 @@
                   ✎
                 </button>
                 <button
+                  type="button"
                   class="btn btn-sm btn-ghost btn-circle"
                   [disabled]="t.estado === 'Completada'"
                   (click)="eliminarTarea(t.idTarea)"
@@ -286,7 +293,7 @@
                 </div>
               </div>
 
-              <button class="btn btn-sm btn-outline" (click)="abrirModalOperacionProveedor(prov)">
+              <button type="button" class="btn btn-sm btn-outline" (click)="abrirModalOperacionProveedor(prov)">
                 Gestionar tiempos
               </button>
             </div>
@@ -303,8 +310,8 @@
           No hay hitos logísticos ni horarios pactados para este filtro.
         </p>
         <div class="flex justify-center gap-3">
-          <button class="btn btn-outline" (click)="generarPlantillaBase()">Autogenerar Plantilla</button>
-          <button class="btn btn-primary" (click)="abrirModalTarea()">Agregar Primer Hito</button>
+          <button type="button" class="btn btn-outline" (click)="generarPlantillaBase()">Autogenerar Plantilla</button>
+          <button type="button" class="btn btn-primary" (click)="abrirModalTarea()">Agregar Primer Hito</button>
         </div>
       </div>
     </ng-container>
@@ -445,7 +452,7 @@
           </div>
 
           <div class="card-actions justify-end mt-4">
-            <button class="btn btn-sm btn-primary" (click)="abrirModalOperacionProveedor(prov)">
+            <button type="button" class="btn btn-sm btn-primary" (click)="abrirModalOperacionProveedor(prov)">
               Configurar Tiempos y Check-in
             </button>
           </div>
@@ -474,7 +481,7 @@
             <span class="text-sm font-semibold text-base-content/80">
               Subtotal: ${{ srv.subtotal | number: "1.2-2" }}
             </span>
-            <button class="btn btn-sm btn-outline btn-primary" (click)="programarHitoDesdeServicio(srv)">
+            <button type="button" class="btn btn-sm btn-outline btn-primary" (click)="programarHitoDesdeServicio(srv)">
               Programar hito
             </button>
           </div>
@@ -486,7 +493,7 @@
 
 <!-- MODAL DE EDICIÓN/CREACIÓN DE HITO -->
 <dialog id="modal_nueva_tarea" class="modal">
-  <div class="modal-box">
+  <div class="modal-box max-w-xl">
     <h3 class="font-bold text-lg mb-4">
       {{ modoEdicion ? "Editar Hito Logístico" : "Planificar Hito Logístico" }}
     </h3>
@@ -507,6 +514,38 @@
         [(ngModel)]="nuevaTarea.descripcion"
         class="textarea textarea-bordered h-24"
         placeholder="Especifica qué proveedores llegan, instrucciones para el equipo, etc..."
+      ></textarea>
+    </div>
+
+    <!-- Referencia de especificaciones y observaciones del evento al crear/asignar -->
+    <div *ngIf="especificacionesEventoParaTareas.length > 0" class="bg-base-200/70 border border-base-300 rounded-xl p-3 mb-3">
+      <div class="text-xs font-bold uppercase tracking-wide text-primary mb-1.5">
+        Especificaciones y Observaciones del Evento
+      </div>
+      <div class="space-y-1.5 max-h-32 overflow-y-auto text-xs">
+        <div *ngFor="let spec of especificacionesEventoParaTareas" class="bg-base-100 rounded-lg p-2 border border-base-200 flex items-start justify-between gap-2">
+          <div>
+            <div class="font-semibold text-base-content">{{ spec.titulo }}</div>
+            <div class="text-base-content/75">{{ spec.detalle }}</div>
+          </div>
+          <button
+            type="button"
+            class="btn btn-2xs btn-ghost text-primary shrink-0"
+            (click)="aplicarObservacionAlHito(spec.titulo + ': ' + spec.detalle)"
+            title="Copiar a observaciones del hito"
+          >
+            Usar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text font-semibold">Observaciones y Especificaciones de la Tarea</span></label>
+      <textarea
+        [(ngModel)]="nuevaTarea.observaciones"
+        class="textarea textarea-bordered h-20"
+        placeholder="Especificaciones de montaje, cantidades (sillas, mesas, unidades), indicaciones para el empleado asignado..."
       ></textarea>
     </div>
 
@@ -537,6 +576,7 @@
       <form method="dialog">
         <button class="btn mr-2" [disabled]="procesando">Cancelar</button>
         <button
+          type="button"
           class="btn btn-primary"
           (click)="guardarTarea()"
           [disabled]="procesando || !nuevaTarea.nombre || !nuevaTarea.fechaLimite"
